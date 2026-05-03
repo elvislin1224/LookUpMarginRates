@@ -1,0 +1,1961 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>股票期貨保證金查詢系統</title>
+  <meta name="description" content="查詢台灣期貨交易所股票期貨保證金比例，即時計算所需保證金金額。資料來源：TAIFEX 官方公開 API。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ============================
+       CSS 變數 — 深色主題設計系統
+    ============================= */
+    :root {
+      --bg-base: #0d1117;
+      --bg-card: #161b22;
+      --bg-elevated: #21262d;
+      --bg-input: #0d1117;
+      --border: #30363d;
+      --border-active: #58a6ff;
+      --text-primary: #e6edf3;
+      --text-secondary: #8b949e;
+      --text-tertiary: #484f58;
+      --accent-blue: #58a6ff;
+      --accent-green: #3fb950;
+      --accent-orange: #d29922;
+      --accent-red: #f78166;
+      --accent-purple: #bc8cff;
+      --gradient-blue: linear-gradient(135deg, #1f6feb 0%, #58a6ff 100%);
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.3);
+      --transition: 0.18s ease;
+    }
+
+    /* ============================
+       Reset & Base
+    ============================= */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      font-size: 15px;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ============================
+       Layout
+    ============================= */
+    .app-container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 20px 48px;
+    }
+
+    /* ============================
+       Header
+    ============================= */
+    .app-header {
+      padding: 28px 0 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .header-title-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .header-icon {
+      width: 42px;
+      height: 42px;
+      background: var(--gradient-blue);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 0 20px rgba(88, 166, 255, 0.3);
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .header-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-top: 1px;
+    }
+
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      background: var(--bg-card);
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      box-shadow: 0 0 6px var(--accent-green);
+      flex-shrink: 0;
+    }
+
+    .status-dot.loading {
+      background: var(--accent-orange);
+      box-shadow: 0 0 6px var(--accent-orange);
+      animation: pulse 1s infinite;
+    }
+
+    .status-dot.error {
+      background: var(--accent-red);
+      box-shadow: 0 0 6px var(--accent-red);
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: 0.4
+      }
+    }
+
+    /* ============================
+       Main Grid
+    ============================= */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    @media (max-width: 900px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ============================
+       Card
+    ============================= */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-card);
+    }
+
+    .card-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      background: var(--bg-elevated);
+    }
+
+    .card-body {
+      padding: 18px;
+    }
+
+    /* ============================
+       Search Panel
+    ============================= */
+    .search-panel {
+      position: relative;
+    }
+
+    .search-wrap {
+      position: relative;
+    }
+
+    .search-input {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 0.95rem;
+      padding: 11px 14px 11px 42px;
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+
+    .search-input:focus {
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.12);
+    }
+
+    .search-input::placeholder {
+      color: var(--text-tertiary);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 13px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-tertiary);
+      font-size: 16px;
+      pointer-events: none;
+    }
+
+    .search-spinner {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent-blue);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin {
+      to {
+        transform: translateY(-50%) rotate(360deg);
+      }
+    }
+
+    /* Dropdown */
+    .dropdown {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      background: var(--bg-card);
+      border: 1px solid var(--border-active);
+      border-radius: var(--radius-md);
+      max-height: 320px;
+      overflow-y: auto;
+      z-index: 100;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      display: none;
+    }
+
+    .dropdown.show {
+      display: block;
+    }
+
+    .dropdown::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .dropdown::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .dropdown::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    .dropdown-item {
+      padding: 10px 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+      transition: background var(--transition);
+    }
+
+    .dropdown-item:last-child {
+      border-bottom: none;
+    }
+
+    .dropdown-item:hover,
+    .dropdown-item.active {
+      background: var(--bg-elevated);
+    }
+
+    .di-badge {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      min-width: 48px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .di-badge.stock {
+      background: rgba(88, 166, 255, 0.15);
+      color: var(--accent-blue);
+      border: 1px solid rgba(88, 166, 255, 0.25);
+    }
+
+    .di-badge.etf {
+      background: rgba(188, 140, 255, 0.15);
+      color: var(--accent-purple);
+      border: 1px solid rgba(188, 140, 255, 0.25);
+    }
+
+    .di-badge.mini {
+      background: rgba(63, 185, 80, 0.15);
+      color: var(--accent-green);
+      border: 1px solid rgba(63, 185, 80, 0.25);
+    }
+
+    .di-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .di-name {
+      font-size: 0.88rem;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .di-code {
+      font-size: 0.74rem;
+      color: var(--text-secondary);
+      margin-top: 1px;
+    }
+
+    .di-highlight {
+      color: var(--accent-blue);
+    }
+
+    .dropdown-empty {
+      padding: 20px 14px;
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+
+    /* ============================
+       Result Panel
+    ============================= */
+    .result-placeholder {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--text-tertiary);
+      font-size: 0.85rem;
+    }
+
+    .result-placeholder .placeholder-icon {
+      font-size: 2rem;
+      margin-bottom: 8px;
+      opacity: 0.5;
+    }
+
+    .result-content {
+      display: none;
+    }
+
+    .result-content.show {
+      display: block;
+    }
+
+    .result-contract-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .result-type-badge {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .result-type-badge.stock {
+      background: rgba(88, 166, 255, 0.15);
+      color: var(--accent-blue);
+      border: 1px solid rgba(88, 166, 255, 0.25);
+    }
+
+    .result-type-badge.etf {
+      background: rgba(188, 140, 255, 0.15);
+      color: var(--accent-purple);
+      border: 1px solid rgba(188, 140, 255, 0.25);
+    }
+
+    .result-type-badge.mini {
+      background: rgba(63, 185, 80, 0.15);
+      color: var(--accent-green);
+      border: 1px solid rgba(63, 185, 80, 0.25);
+    }
+
+    .result-contract-name {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .result-contract-sub {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .margin-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .margin-box {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      text-align: center;
+    }
+
+    .margin-box-label {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+
+    .margin-box-value {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .margin-box-value.clearing {
+      color: var(--accent-blue);
+    }
+
+    .margin-box-value.maintenance {
+      color: var(--accent-orange);
+    }
+
+    .margin-box-value.initial {
+      color: var(--accent-green);
+    }
+
+    .margin-box-unit {
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .result-meta {
+      background: var(--bg-elevated);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      margin-bottom: 14px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      font-size: 0.78rem;
+    }
+
+    .result-meta-item {
+      display: flex;
+      gap: 6px;
+    }
+
+    .result-meta-label {
+      color: var(--text-secondary);
+    }
+
+    .result-meta-value {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .btn-primary {
+      width: 100%;
+      background: var(--gradient-blue);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-md);
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 11px;
+      cursor: pointer;
+      transition: opacity var(--transition), transform var(--transition), box-shadow var(--transition);
+      box-shadow: 0 0 16px rgba(88, 166, 255, 0.25);
+    }
+
+    .btn-primary:hover {
+      opacity: 0.88;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(88, 166, 255, 0.35);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .data-date {
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--text-tertiary);
+      margin-top: 10px;
+    }
+
+    /* ============================
+       Calculation Table
+    ============================= */
+    .calc-section {
+      margin-top: 20px;
+    }
+
+    .calc-table-wrap {
+      overflow-x: auto;
+    }
+
+    .calc-table-wrap::-webkit-scrollbar {
+      height: 4px;
+    }
+
+    .calc-table-wrap::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .calc-table-wrap::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    table.calc-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 900px;
+    }
+
+    .calc-table thead tr {
+      background: var(--bg-elevated);
+    }
+
+    .calc-table th {
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .calc-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+      vertical-align: middle;
+      font-size: 0.85rem;
+    }
+
+    .calc-table tbody tr {
+      transition: background var(--transition);
+    }
+
+    .calc-table tbody tr:hover {
+      background: rgba(33, 38, 45, 0.5);
+    }
+
+    .calc-table tbody tr.empty-row td {
+      color: var(--text-tertiary);
+    }
+
+    /* Cell types */
+    .cell-name {
+      font-weight: 500;
+      white-space: nowrap;
+      max-width: 160px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .cell-code {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      font-family: monospace;
+    }
+
+    .cell-price {
+      font-family: monospace;
+      font-size: 0.85rem;
+      min-width: 90px;
+    }
+
+    .cell-tag {
+      display: inline-block;
+      font-size: 0.65rem;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-weight: 600;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+
+    .cell-tag.mini {
+      background: rgba(63, 185, 80, 0.15);
+      color: var(--accent-green);
+    }
+
+    .cell-tag.etf {
+      background: rgba(188, 140, 255, 0.15);
+      color: var(--accent-purple);
+    }
+
+    .price-time {
+      font-size: 0.68rem;
+      color: var(--text-tertiary);
+      display: block;
+    }
+
+    /* Lot input */
+    .lot-input {
+      width: 70px;
+      background: var(--bg-input);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-family: monospace;
+      font-size: 0.88rem;
+      padding: 5px 8px;
+      text-align: right;
+      outline: none;
+      transition: border-color var(--transition);
+    }
+
+    .lot-input:focus {
+      border-color: var(--accent-blue);
+    }
+
+    .lot-input:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    /* Price input */
+    .price-input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .price-input {
+      width: 88px;
+      background: var(--bg-input);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-family: monospace;
+      font-size: 0.88rem;
+      padding: 5px 8px;
+      text-align: right;
+      outline: none;
+      transition: border-color var(--transition);
+    }
+
+    .price-input:focus {
+      border-color: var(--accent-orange);
+    }
+
+    .price-input:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .btn-refresh-price {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 5px 7px;
+      font-size: 13px;
+      transition: color var(--transition), border-color var(--transition), background var(--transition);
+      line-height: 1;
+    }
+
+    .btn-refresh-price:hover {
+      color: var(--accent-blue);
+      border-color: var(--accent-blue);
+      background: rgba(88, 166, 255, 0.08);
+    }
+
+    .btn-refresh-price.spinning {
+      animation: spin-icon 0.6s linear infinite;
+    }
+
+    @keyframes spin-icon {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* Amount cells */
+    .cell-amount {
+      font-family: monospace;
+      font-size: 0.85rem;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .cell-amount.clearing {
+      color: var(--accent-blue);
+    }
+
+    .cell-amount.maintenance {
+      color: var(--accent-orange);
+    }
+
+    .cell-amount.initial {
+      color: var(--accent-green);
+    }
+
+    .cell-amount.empty {
+      color: var(--text-tertiary);
+    }
+
+    /* Delete button */
+    .btn-delete {
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      color: var(--text-tertiary);
+      cursor: pointer;
+      padding: 5px 8px;
+      font-size: 15px;
+      transition: color var(--transition), border-color var(--transition), background var(--transition);
+      line-height: 1;
+    }
+
+    .btn-delete:hover {
+      color: var(--accent-red);
+      border-color: rgba(247, 129, 102, 0.3);
+      background: rgba(247, 129, 102, 0.06);
+    }
+
+    /* ============================
+       Summary Row
+    ============================= */
+    .summary-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .summary-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+    }
+
+    .summary-label {
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+
+    .summary-value {
+      font-size: 1.2rem;
+      font-weight: 700;
+      font-family: monospace;
+      letter-spacing: -0.02em;
+    }
+
+    .summary-value.clearing {
+      color: var(--accent-blue);
+    }
+
+    .summary-value.maintenance {
+      color: var(--accent-orange);
+    }
+
+    .summary-value.initial {
+      color: var(--accent-green);
+    }
+
+    /* ============================
+       Footer
+    ============================= */
+    .app-footer {
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 0.72rem;
+      color: var(--text-tertiary);
+    }
+
+    .footer-source a {
+      color: var(--text-secondary);
+      text-decoration: none;
+    }
+
+    .footer-source a:hover {
+      color: var(--accent-blue);
+    }
+
+    /* ============================
+       Toast / Notification
+    ============================= */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      font-size: 0.83rem;
+      color: var(--text-primary);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      animation: slideIn 0.2s ease, fadeOut 0.3s ease 2.5s forwards;
+      min-width: 220px;
+      max-width: 320px;
+    }
+
+    .toast.success {
+      border-left: 3px solid var(--accent-green);
+    }
+
+    .toast.error {
+      border-left: 3px solid var(--accent-red);
+    }
+
+    .toast.info {
+      border-left: 3px solid var(--accent-blue);
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(20px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes fadeOut {
+      from {
+        opacity: 1;
+      }
+
+      to {
+        opacity: 0;
+      }
+    }
+
+    /* ============================
+       Loading overlay
+    ============================= */
+    .loading-overlay {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      flex-direction: column;
+      gap: 12px;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+
+    .loading-spinner-lg {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent-blue);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    /* Empty row placeholder */
+    .empty-row-text {
+      color: var(--text-tertiary);
+      font-style: italic;
+      font-size: 0.8rem;
+      user-select: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ============================
+     App Container
+============================= -->
+  <div class="app-container">
+
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-title-group">
+        <div class="header-icon">📊</div>
+        <div>
+          <div class="header-title">股票期貨保證金查詢</div>
+          <div class="header-subtitle">Taiwan Stock Futures Margin Calculator</div>
+        </div>
+      </div>
+      <div class="header-meta">
+        <div class="status-badge" id="status-badge">
+          <div class="status-dot loading" id="status-dot"></div>
+          <span id="status-text">載入資料中...</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Grid -->
+    <div class="main-grid">
+
+      <!-- LEFT: Search + Result -->
+      <div>
+        <!-- Search Card -->
+        <div class="card search-panel">
+          <div class="card-header">
+            <span>🔍</span> 搜尋期貨
+          </div>
+          <div class="card-body">
+            <div class="search-wrap">
+              <span class="search-icon">⌕</span>
+              <input type="text" id="search-input" class="search-input" placeholder="輸入股票代碼或名稱（如：2330、台積電）"
+                autocomplete="off" aria-label="搜尋股票期貨" disabled>
+              <div class="search-spinner" id="search-spinner"></div>
+            </div>
+            <div class="dropdown" id="dropdown" role="listbox"></div>
+          </div>
+        </div>
+
+        <!-- Result Card -->
+        <div class="card" style="margin-top:14px;">
+          <div class="card-header">
+            <span>📋</span> 查詢結果
+          </div>
+          <div class="card-body">
+            <!-- Placeholder -->
+            <div class="result-placeholder" id="result-placeholder">
+              <div class="placeholder-icon">📉</div>
+              <div>搜尋並選取期貨合約<br>即可查看保證金比例</div>
+            </div>
+
+            <!-- Result Content -->
+            <div class="result-content" id="result-content">
+              <!-- Contract Header -->
+              <div class="result-contract-header">
+                <span class="result-type-badge" id="result-type-badge"></span>
+                <div>
+                  <div class="result-contract-name" id="result-name"></div>
+                  <div class="result-contract-sub" id="result-sub"></div>
+                </div>
+              </div>
+
+              <!-- Margin Rates -->
+              <div class="margin-grid">
+                <div class="margin-box">
+                  <div class="margin-box-label">結算保證金</div>
+                  <div class="margin-box-value clearing" id="result-clearing">—</div>
+                  <div class="margin-box-unit" id="result-clearing-unit">—</div>
+                </div>
+                <div class="margin-box">
+                  <div class="margin-box-label">維持保證金</div>
+                  <div class="margin-box-value maintenance" id="result-maintenance">—</div>
+                  <div class="margin-box-unit" id="result-maintenance-unit">—</div>
+                </div>
+                <div class="margin-box">
+                  <div class="margin-box-label">原始保證金</div>
+                  <div class="margin-box-value initial" id="result-initial">—</div>
+                  <div class="margin-box-unit" id="result-initial-unit">—</div>
+                </div>
+              </div>
+
+              <!-- Meta Info -->
+              <div class="result-meta">
+                <div class="result-meta-item">
+                  <span class="result-meta-label">每口股數</span>
+                  <span class="result-meta-value" id="result-lot-size">—</span>
+                </div>
+                <div class="result-meta-item">
+                  <span class="result-meta-label">保證金級距</span>
+                  <span class="result-meta-value" id="result-group">—</span>
+                </div>
+                <div class="result-meta-item">
+                  <span class="result-meta-label">期貨代碼</span>
+                  <span class="result-meta-value" id="result-contract-code">—</span>
+                </div>
+                <div class="result-meta-item">
+                  <span class="result-meta-label">資料日期</span>
+                  <span class="result-meta-value" id="result-date">—</span>
+                </div>
+              </div>
+
+              <!-- Import Button -->
+              <button class="btn-primary" id="btn-import" onclick="importToCalc()">
+                ＋ 帶入計算
+              </button>
+
+              <div class="data-date" id="result-data-date"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Calculation Table -->
+      <div>
+        <div class="card calc-section">
+          <div class="card-header">
+            <span>🧮</span> 保證金計算區
+            <span
+              style="margin-left:auto;font-size:0.7rem;color:var(--text-tertiary);text-transform:none;letter-spacing:0;">
+              口數 × 每口股數 × 股價 × 比例
+            </span>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <div class="calc-table-wrap">
+              <table class="calc-table" id="calc-table">
+                <thead>
+                  <tr>
+                    <th>期貨名稱</th>
+                    <th>代碼</th>
+                    <th style="text-align:center">類型</th>
+                    <th>即時股價</th>
+                    <th style="text-align:right">口數</th>
+                    <th style="text-align:right">結算保證金</th>
+                    <th style="text-align:right">維持保證金</th>
+                    <th style="text-align:right">原始保證金</th>
+                    <th style="text-align:center">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="calc-tbody">
+                  <!-- Rows generated by JS -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Summary -->
+            <div style="padding:14px 18px;">
+              <div
+                style="font-size:0.72rem;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;">
+                合計
+              </div>
+              <div class="summary-row">
+                <div class="summary-box">
+                  <div class="summary-label">結算保證金合計</div>
+                  <div class="summary-value clearing" id="sum-clearing">$0</div>
+                </div>
+                <div class="summary-box">
+                  <div class="summary-label">維持保證金合計</div>
+                  <div class="summary-value maintenance" id="sum-maintenance">$0</div>
+                </div>
+                <div class="summary-box">
+                  <div class="summary-label">原始保證金合計</div>
+                  <div class="summary-value initial" id="sum-initial">$0</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /.main-grid -->
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div class="footer-source">
+        資料來源：
+        <a href="https://openapi.taifex.com.tw/" target="_blank" rel="noopener">臺灣期貨交易所 OpenAPI</a>
+        ・
+        <a href="https://mis.twse.com.tw/" target="_blank" rel="noopener">臺灣證券交易所行情資訊</a>
+      </div>
+      <div>僅供個人參考使用，請以 TAIFEX 官方公告為準</div>
+    </footer>
+
+  </div><!-- /.app-container -->
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- ============================
+     JavaScript
+============================= -->
+  <script>
+    'use strict';
+
+    /* ─────────────────────────────
+       全域狀態
+    ───────────────────────────── */
+    const STATE = {
+      futures: [],        // 合併後的所有期貨資料（主搜尋索引）
+      selected: null,     // 當前查詢結果
+      rows: Array(10).fill(null),  // 計算區 10 列資料
+      dataDate: '',
+    };
+
+    /* ─────────────────────────────
+       常數
+    ───────────────────────────── */
+    const TAIFEX_BASE = 'https://openapi.taifex.com.tw/v1';
+    const TWSE_REALTIME = 'https://mis.twse.com.tw/stock/api/getStockInfo.jsp';
+    const STORAGE_KEY = 'margin_calc_rows_v2';
+    const MAX_ROWS = 10;
+
+    // CORS Proxy 備援清單（依序嘗試）
+    const CORS_PROXIES = [
+      url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+      url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+      url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+      url => `https://cors-anywhere.herokuapp.com/${url}`,
+    ];
+
+    // 隨機延遲函數（符合合法爬蟲禮節）
+    function randomDelay(min = 300, max = 800) {
+      const delay = Math.floor(Math.random() * (max - min + 1)) + min;
+      return new Promise(resolve => setTimeout(resolve, delay));
+    }
+
+    /* ─────────────────────────────
+       初始化
+    ───────────────────────────── */
+    document.addEventListener('DOMContentLoaded', () => {
+      loadFromStorage();
+      renderAllRows();
+      loadAllData();
+      initSearch();
+    });
+
+    /* ─────────────────────────────
+       資料載入
+    ───────────────────────────── */
+    async function fetchWithProxy(url, retries = 3) {
+      const logPrefix = `[API] ${url.split('/').pop()}`;
+      
+      // 1. 先嘗試直接請求（若 CORS 允許）
+      try {
+        console.log(`${logPrefix}: 嘗試直接請求...`);
+        const r = await fetch(url, { cache: 'no-cache', signal: AbortSignal.timeout(8000) });
+        if (r.ok) {
+          const data = await r.json();
+          console.log(`${logPrefix}: ✓ 直接請求成功 (${data.length} 筆資料)`);
+          return data;
+        }
+      } catch (err) {
+        console.log(`${logPrefix}: ✗ 直接請求失敗 (CORS限制)，切換至 Proxy 模式`);
+      }
+
+      // 2. 依序嘗試備援 Proxy（含重試機制）
+      for (let attempt = 1; attempt <= retries; attempt++) {
+        for (let i = 0; i < CORS_PROXIES.length; i++) {
+          const makeUrl = CORS_PROXIES[i];
+          const proxyName = ['AllOrigins', 'CodeTabs', 'CORSProxy', 'CORS Anywhere'][i];
+          
+          try {
+            // 添加隨機延遲（合法爬蟲禮節）
+            if (attempt > 1 || i > 0) {
+              await randomDelay(300, 800);
+            }
+            
+            console.log(`${logPrefix}: [嘗試 ${attempt}/${retries}] 使用 ${proxyName}...`);
+            const proxyUrl = makeUrl(url);
+            const r = await fetch(proxyUrl, { 
+              cache: 'no-cache', 
+              signal: AbortSignal.timeout(12000),
+              headers: { 'Accept': 'application/json' }
+            });
+            
+            if (!r.ok) {
+              console.warn(`${logPrefix}: ${proxyName} HTTP ${r.status}`);
+              continue;
+            }
+            
+            const text = await r.text();
+            
+            // allorigins 可能回傳 JSON wrapped 格式
+            let data;
+            try {
+              data = JSON.parse(text);
+              // 檢查是否為 allorigins 的包裝格式
+              if (data.contents) {
+                data = JSON.parse(data.contents);
+              }
+            } catch (parseErr) {
+              console.warn(`${logPrefix}: ${proxyName} JSON 解析失敗`);
+              continue;
+            }
+            
+            // 驗證資料格式
+            if (!Array.isArray(data) || data.length === 0) {
+              console.warn(`${logPrefix}: ${proxyName} 回傳資料格式異常`);
+              continue;
+            }
+            
+            console.log(`${logPrefix}: ✓ ${proxyName} 成功 (${data.length} 筆資料)`);
+            return data;
+            
+          } catch (err) {
+            console.warn(`${logPrefix}: ${proxyName} 錯誤 - ${err.message}`);
+          }
+        }
+        
+        if (attempt < retries) {
+          const waitTime = attempt * 1000;
+          console.log(`${logPrefix}: 所有 Proxy 失敗，等待 ${waitTime}ms 後重試...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+      }
+      
+      throw new Error(`${logPrefix}: 所有 CORS Proxy 均失敗 (已重試 ${retries} 次)`);
+    }
+
+    async function loadAllData() {
+      console.log('=== 開始載入 TAIFEX 資料 ===');
+      setStatus('loading', '載入保證金資料中...');
+      
+      try {
+        // 優先嘗試讀取本地 JSON（24 小時快取）
+        const localData = await loadLocalJSON();
+        
+        if (localData && isDataFresh(localData.last_updated)) {
+          console.log('✓ 使用本地快取資料');
+          STATE.futures = localData.futures || [];
+          STATE.dataDate = localData.data_date || '';
+          
+          console.log(`✓ 系統就緒！資料日期：${STATE.dataDate} (快取)`);
+          setStatus('ok', `資料已更新 ${STATE.dataDate} (快取)`);
+          document.getElementById('search-input').disabled = false;
+          document.getElementById('search-input').placeholder = '輸入股票代碼或名稱（如：2330、台積電）';
+          showToast('本地資料載入成功！', 'success');
+          return;
+        }
+        
+        // 本地資料不存在或已過期，使用線上 API
+        console.log('⚠ 本地資料不存在或已過期，使用線上 API...');
+        
+        // 序列請求（避免同時觸發過多 Proxy 請求）+ 隨機延遲
+        console.log('[Step 1/3] 載入股票期貨清單...');
+        const ssfList = await fetchWithProxy(`${TAIFEX_BASE}/SSFLists`);
+        
+        await randomDelay(500, 1000);
+        console.log('[Step 2/3] 載入股票期貨保證金...');
+        const stockMargin = await fetchWithProxy(`${TAIFEX_BASE}/SingleStockFuturesMargining`);
+        
+        await randomDelay(500, 1000);
+        console.log('[Step 3/3] 載入 ETF 期貨保證金...');
+        const etfMargin = await fetchWithProxy(`${TAIFEX_BASE}/SingleStockFuturesETFMargining`);
+
+        console.log('=== 資料載入完成，開始建立索引 ===');
+        buildFuturesIndex(ssfList, stockMargin, etfMargin);
+
+        // 取得保證金資料日期
+        if (stockMargin && stockMargin.length > 0) {
+          STATE.dataDate = formatDate(stockMargin[0].Date);
+        }
+
+        console.log(`✓ 系統就緒！資料日期：${STATE.dataDate}`);
+        setStatus('ok', `資料已更新 ${STATE.dataDate}`);
+        document.getElementById('search-input').disabled = false;
+        document.getElementById('search-input').placeholder = '輸入股票代碼或名稱（如：2330、台積電）';
+        showToast('線上資料載入成功！', 'success');
+
+      } catch (err) {
+        console.error('=== 資料載入失敗 ===');
+        console.error('錯誤詳情:', err);
+        console.error('Stack trace:', err.stack);
+        setStatus('error', '資料載入失敗，請重整頁面');
+        showToast(`載入失敗：${err.message}`, 'error');
+      }
+    }
+
+    async function loadLocalJSON() {
+      /**
+       * 嘗試載入本地 JSON 檔案
+       * @returns {Object|null} JSON 資料或 null
+       */
+      try {
+        console.log('[Local] 嘗試讀取本地 JSON: data/margin_data.json');
+        const response = await fetch('data/margin_data.json', { cache: 'no-cache' });
+        
+        if (!response.ok) {
+          console.log('[Local] 本地檔案不存在或無法讀取');
+          return null;
+        }
+        
+        const data = await response.json();
+        console.log(`[Local] ✓ 本地 JSON 載入成功 (${data.total_count || 0} 筆資料)`);
+        console.log(`[Local] 資料更新時間：${data.last_updated}`);
+        console.log(`[Local] 資料日期：${data.data_date}`);
+        
+        return data;
+        
+      } catch (err) {
+        console.log(`[Local] 讀取本地 JSON 失敗: ${err.message}`);
+        return null;
+      }
+    }
+
+    function isDataFresh(lastUpdated, maxAgeHours = 24) {
+      /**
+       * 檢查資料是否在有效期內
+       * @param {string} lastUpdated - ISO 8601 時間字串
+       * @param {number} maxAgeHours - 最大有效時數（預設 24 小時）
+       * @returns {boolean}
+       */
+      if (!lastUpdated) return false;
+      
+      try {
+        const updateTime = new Date(lastUpdated);
+        const now = new Date();
+        const ageHours = (now - updateTime) / (1000 * 60 * 60);
+        
+        const isFresh = ageHours < maxAgeHours;
+        console.log(`[Cache] 資料年齡：${ageHours.toFixed(2)} 小時 (限制: ${maxAgeHours} 小時)`);
+        console.log(`[Cache] 資料狀態：${isFresh ? '✓ 有效' : '✗ 已過期'}`);
+        
+        return isFresh;
+        
+      } catch (err) {
+        console.warn(`[Cache] 時間解析錯誤: ${err.message}`);
+        return false;
+      }
+    }
+
+    function buildFuturesIndex(ssfList, stockMargin, etfMargin) {
+      const margMap = {}; // UnderlyingSecurityCode → margin info
+
+      // 處理股票類保證金（比例）
+      (stockMargin || []).forEach(m => {
+        const code = (m.UnderlyingSecurityCode || '').trim();
+        if (!code) return;
+        margMap[code] = {
+          type: 'stock',
+          contractCode: (m.Contract || '').trim(),
+          contractName: (m.ContractName || '').trim(),
+          stockCode: code,
+          groupLevel: m.GroupLevel || '',
+          clearingRate: parseFloat(m.ClearingMarginRate) || 0,
+          maintenanceRate: parseFloat(m.MaintenanceMarginRate) || 0,
+          initialRate: parseFloat(m.InitialMarginRate) || 0,
+          lotSize: detectLotSize(m.ContractName),
+          date: m.Date || '',
+        };
+      });
+
+      // 處理 ETF 類保證金（固定金額）
+      (etfMargin || []).forEach(m => {
+        const code = (m.UnderlyingSecurityCode || '').trim();
+        if (!code) return;
+        margMap[code] = {
+          type: 'etf',
+          contractCode: (m.Contract || '').trim(),
+          contractName: (m.ContractName || '').trim(),
+          stockCode: code,
+          groupLevel: '',
+          clearingFixed: parseFloat((m.ClearingMargin || '').replace(/,/g, '')) || 0,
+          maintenanceFixed: parseFloat((m.MaintenanceMargin || '').replace(/,/g, '')) || 0,
+          initialFixed: parseFloat((m.InitialMargin || '').replace(/,/g, '')) || 0,
+          lotSize: 1000, // ETF 期貨每口 1000 單位
+          date: m.Date || '',
+        };
+      });
+
+      // 以 SSFLists 為基礎建立搜尋索引
+      STATE.futures = (ssfList || []).map(s => {
+        const code = (s.StockCode || '').trim();
+        const contract = (s.Contract || '').trim();
+        const stockName = (s.StockName || '').trim();
+
+        // 從保證金資料匹配
+        const mInfo = margMap[code] || margMap[contract] || null;
+
+        return {
+          contract,
+          stockCode: code,
+          stockName,
+          underlying: (s.UnderlyingStock || '').trim(),
+          securityType: (s.Type || '').trim(),
+          ...mInfo,
+          // 若找不到保證金資料，標記
+          _hasMargin: !!mInfo,
+        };
+      }).filter(f => f.stockCode || f.contract); // 過濾空項
+
+      console.log(`[Index] 建立完成：${STATE.futures.length} 筆期貨`);
+    }
+
+    function detectLotSize(contractName) {
+      if (!contractName) return 2000;
+      return contractName.includes('小型') ? 100 : 2000;
+    }
+
+    function formatDate(raw) {
+      if (!raw) return '';
+      // TAIFEX 日期格式為 YYYYMMDD 或 YYYY/MM/DD
+      const s = String(raw).replace(/\//g, '');
+      if (s.length === 8) {
+        return `${s.slice(0, 4)}/${s.slice(4, 6)}/${s.slice(6, 8)}`;
+      }
+      return raw;
+    }
+
+    /* ─────────────────────────────
+       搜尋
+    ───────────────────────────── */
+    let searchDebounce = null;
+    let dropdownActiveIdx = -1;
+    let currentQuery = '';
+
+    function initSearch() {
+      const input = document.getElementById('search-input');
+      const dropdown = document.getElementById('dropdown');
+
+      input.addEventListener('input', () => {
+        clearTimeout(searchDebounce);
+        const q = input.value.trim();
+        currentQuery = q;
+        if (!q) { closeDropdown(); return; }
+        document.getElementById('search-spinner').style.display = 'block';
+        searchDebounce = setTimeout(() => {
+          doSearch(q);
+          document.getElementById('search-spinner').style.display = 'none';
+        }, 200);
+      });
+
+      input.addEventListener('keydown', e => {
+        const items = dropdown.querySelectorAll('.dropdown-item');
+        if (!items.length) return;
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          dropdownActiveIdx = Math.min(dropdownActiveIdx + 1, items.length - 1);
+          updateDropdownActive(items);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          dropdownActiveIdx = Math.max(dropdownActiveIdx - 1, 0);
+          updateDropdownActive(items);
+        } else if (e.key === 'Enter') {
+          if (dropdownActiveIdx >= 0 && items[dropdownActiveIdx]) {
+            items[dropdownActiveIdx].click();
+          }
+        } else if (e.key === 'Escape') {
+          closeDropdown();
+        }
+      });
+
+      document.addEventListener('click', e => {
+        if (!e.target.closest('.search-panel')) closeDropdown();
+      });
+    }
+
+    function doSearch(query) {
+      const q = query.toLowerCase().trim();
+      const results = STATE.futures.filter(f => {
+        const name = (f.stockName || '').toLowerCase();
+        const code = (f.stockCode || '').toLowerCase();
+        const contract = (f.contract || '').toLowerCase();
+        const cName = (f.contractName || '').toLowerCase();
+        return name.includes(q) || code.startsWith(q) || contract.startsWith(q) || cName.includes(q);
+      }).slice(0, 25);
+
+      renderDropdown(results, query);
+    }
+
+    function renderDropdown(results, query) {
+      const dropdown = document.getElementById('dropdown');
+      dropdownActiveIdx = -1;
+
+      if (!results.length) {
+        dropdown.innerHTML = `<div class="dropdown-empty">找不到符合的期貨合約</div>`;
+        dropdown.classList.add('show');
+        return;
+      }
+
+      dropdown.innerHTML = results.map((f, i) => {
+        const hl = (text) => {
+          if (!text) return '';
+          const idx = text.toLowerCase().indexOf(query.toLowerCase());
+          if (idx < 0) return escHtml(text);
+          return escHtml(text.slice(0, idx)) +
+            `<span class="di-highlight">${escHtml(text.slice(idx, idx + query.length))}</span>` +
+            escHtml(text.slice(idx + query.length));
+        };
+
+        const isMini = (f.contractName || '').includes('小型');
+        const isEtf = f.type === 'etf';
+        const badgeClass = isEtf ? 'etf' : (isMini ? 'mini' : 'stock');
+        const badgeText = isEtf ? 'ETF 期貨' : (isMini ? '小型期貨' : '股票期貨');
+        const sub = f.stockCode ? `${f.stockCode}${f.contractCode ? ' · ' + f.contractCode : ''}` : f.contract;
+
+        return `<div class="dropdown-item" role="option" data-idx="${i}" onclick="selectFuture(${i}, this)">
+      <span class="di-badge ${badgeClass}">${badgeText}</span>
+      <div class="di-info">
+        <div class="di-name">${hl(f.contractName || f.stockName || f.contract)}</div>
+        <div class="di-code">${hl(sub)}</div>
+      </div>
+    </div>`;
+      }).join('');
+
+      dropdown.classList.add('show');
+      // 存搜尋結果索引對應
+      dropdown._results = results;
+    }
+
+    function updateDropdownActive(items) {
+      items.forEach((el, i) => el.classList.toggle('active', i === dropdownActiveIdx));
+      if (items[dropdownActiveIdx]) {
+        items[dropdownActiveIdx].scrollIntoView({ block: 'nearest' });
+      }
+    }
+
+    function closeDropdown() {
+      document.getElementById('dropdown').classList.remove('show');
+      dropdownActiveIdx = -1;
+    }
+
+    function selectFuture(localIdx, el) {
+      const dropdown = document.getElementById('dropdown');
+      const results = dropdown._results;
+      if (!results || !results[localIdx]) return;
+
+      const future = results[localIdx];
+      STATE.selected = future;
+      document.getElementById('search-input').value = future.contractName || future.stockName || future.contract;
+      closeDropdown();
+      showResult(future);
+    }
+
+    /* ─────────────────────────────
+       結果顯示
+    ───────────────────────────── */
+    function showResult(f) {
+      document.getElementById('result-placeholder').style.display = 'none';
+      const rc = document.getElementById('result-content');
+      rc.classList.add('show');
+
+      const isMini = (f.contractName || '').includes('小型');
+      const isEtf = f.type === 'etf';
+      const badgeClass = isEtf ? 'etf' : (isMini ? 'mini' : 'stock');
+      const badgeText = isEtf ? 'ETF 期貨' : (isMini ? '小型股票期貨' : '一般股票期貨');
+
+      document.getElementById('result-type-badge').className = `result-type-badge ${badgeClass}`;
+      document.getElementById('result-type-badge').textContent = badgeText;
+      document.getElementById('result-name').textContent = f.contractName || f.stockName || f.contract;
+      document.getElementById('result-sub').textContent = `股票代碼：${f.stockCode || '—'}  期貨代碼：${f.contractCode || '—'}`;
+
+      if (isEtf) {
+        // ETF：顯示固定金額
+        const fmt = n => `$${formatNum(n)}`;
+        document.getElementById('result-clearing').textContent = fmt(f.clearingFixed);
+        document.getElementById('result-clearing-unit').textContent = '元/口（固定）';
+        document.getElementById('result-maintenance').textContent = fmt(f.maintenanceFixed);
+        document.getElementById('result-maintenance-unit').textContent = '元/口（固定）';
+        document.getElementById('result-initial').textContent = fmt(f.initialFixed);
+        document.getElementById('result-initial-unit').textContent = '元/口（固定）';
+      } else {
+        // 股票：顯示比例
+        const fmt = n => `${(n * 100).toFixed(2)}%`;
+        document.getElementById('result-clearing').textContent = fmt(f.clearingRate);
+        document.getElementById('result-clearing-unit').textContent = '× 口數 × 股數 × 股價';
+        document.getElementById('result-maintenance').textContent = fmt(f.maintenanceRate);
+        document.getElementById('result-maintenance-unit').textContent = '× 口數 × 股數 × 股價';
+        document.getElementById('result-initial').textContent = fmt(f.initialRate);
+        document.getElementById('result-initial-unit').textContent = '× 口數 × 股數 × 股價';
+      }
+
+      const lotSizeLabel = isEtf ? '1,000 單位' : `${f.lotSize.toLocaleString()} 股`;
+      document.getElementById('result-lot-size').textContent = lotSizeLabel;
+      document.getElementById('result-group').textContent = f.groupLevel || '—';
+      document.getElementById('result-contract-code').textContent = f.contractCode || '—';
+      document.getElementById('result-date').textContent = formatDate(f.date) || STATE.dataDate || '—';
+    }
+
+    /* ─────────────────────────────
+       帶入計算
+    ───────────────────────────── */
+    async function importToCalc() {
+      if (!STATE.selected) return;
+
+      const emptyIdx = STATE.rows.findIndex(r => r === null);
+      if (emptyIdx < 0) {
+        showToast('計算區已滿（10 列），請先刪除一列', 'error');
+        return;
+      }
+
+      const f = STATE.selected;
+      const btn = document.getElementById('btn-import');
+      btn.textContent = '抓取股價中...';
+      btn.disabled = true;
+
+      let price = null;
+      let priceTime = '';
+      let priceLabel = '';
+
+      if (f.type !== 'etf') {
+        const result = await fetchStockPrice(f.stockCode);
+        price = result.price;
+        priceTime = result.time;
+        priceLabel = result.label;
+      }
+
+      STATE.rows[emptyIdx] = {
+        id: Date.now(),
+        contractName: f.contractName || f.stockName || f.contract,
+        stockCode: f.stockCode || '',
+        type: f.type || 'stock',
+        lotSize: f.lotSize || 2000,
+        isMini: (f.contractName || '').includes('小型'),
+        clearingRate: f.clearingRate || 0,
+        maintenanceRate: f.maintenanceRate || 0,
+        initialRate: f.initialRate || 0,
+        clearingFixed: f.clearingFixed || 0,
+        maintenanceFixed: f.maintenanceFixed || 0,
+        initialFixed: f.initialFixed || 0,
+        price: price,
+        priceTime: priceTime,
+        priceLabel: priceLabel,
+        lots: '',
+      };
+
+      saveToStorage();
+      renderAllRows();
+      calcSummary();
+      showToast(`已帶入：${f.contractName || f.stockCode}`, 'success');
+
+      btn.textContent = '＋ 帶入計算';
+      btn.disabled = false;
+    }
+
+    /* ─────────────────────────────
+       即時股價抓取
+    ───────────────────────────── */
+    async function fetchStockPrice(stockCode) {
+      if (!stockCode) return { price: null, time: '', label: '' };
+
+      // 上市先試，再試上櫃
+      const markets = ['tse', 'otc'];
+      for (const mkt of markets) {
+        try {
+          const url = `${TWSE_REALTIME}?ex_ch=${mkt}_${stockCode}.tw&json=1&delay=0`;
+          const data = await fetchWithProxy(url);
+          if (data && data.msgArray && data.msgArray.length > 0) {
+            const info = data.msgArray[0];
+            const rawPrice = info.z || info.y || info.pz || '';
+            if (rawPrice && rawPrice !== '-') {
+              const price = parseFloat(rawPrice);
+              if (!isNaN(price) && price > 0) {
+                const sysTime = data.queryTime?.sysTime || '';
+                const isOpen = info.z && info.z !== '-';
+                return {
+                  price,
+                  time: sysTime,
+                  label: isOpen ? '盤中' : '收盤',
+                };
+              }
+            }
+          }
+        } catch { /* 嘗試下一個市場 */ }
+      }
+      return { price: null, time: '', label: '無法取得' };
+    }
+
+    async function refreshRowPrice(rowIdx) {
+      const row = STATE.rows[rowIdx];
+      if (!row || row.type === 'etf') return;
+
+      const btn = document.querySelector(`[data-refresh="${rowIdx}"]`);
+      if (btn) { btn.classList.add('spinning'); btn.disabled = true; }
+
+      const result = await fetchStockPrice(row.stockCode);
+      if (result.price !== null) {
+        STATE.rows[rowIdx].price = result.price;
+        STATE.rows[rowIdx].priceTime = result.time;
+        STATE.rows[rowIdx].priceLabel = result.label;
+        saveToStorage();
+        renderRow(rowIdx);
+        calcSummary();
+        showToast(`${row.stockCode} 股價更新：$${formatNum(result.price)}`, 'info');
+      } else {
+        showToast(`無法取得 ${row.stockCode} 即時股價`, 'error');
+      }
+
+      if (btn) { btn.classList.remove('spinning'); btn.disabled = false; }
+    }
+
+    /* ─────────────────────────────
+       計算區渲染
+    ───────────────────────────── */
+    function renderAllRows() {
+      for (let i = 0; i < MAX_ROWS; i++) renderRow(i);
+    }
+
+    function renderRow(i) {
+      const row = STATE.rows[i];
+      const tbody = document.getElementById('calc-tbody');
+      let tr = document.getElementById(`row-${i}`);
+      if (!tr) {
+        tr = document.createElement('tr');
+        tr.id = `row-${i}`;
+        tbody.appendChild(tr);
+      }
+
+      if (!row) {
+        tr.className = 'empty-row';
+        tr.innerHTML = `
+      <td colspan="9" class="empty-row-text" style="text-align:center;padding:12px;">
+        — 空白列 ${i + 1}，可帶入查詢結果 —
+      </td>`;
+        return;
+      }
+
+      const isMini = row.isMini;
+      const isEtf = row.type === 'etf';
+      const typeTag = isEtf
+        ? '<span class="cell-tag etf">ETF</span>'
+        : (isMini ? '<span class="cell-tag mini">小型</span>' : '');
+
+      // 計算金額
+      const lots = parseFloat(row.lots) || 0;
+      let clr = 0, mnt = 0, ini = 0;
+      const price = parseFloat(row.price) || 0;
+
+      if (isEtf) {
+        clr = lots * row.clearingFixed;
+        mnt = lots * row.maintenanceFixed;
+        ini = lots * row.initialFixed;
+      } else {
+        if (price > 0 && lots > 0) {
+          clr = lots * row.lotSize * price * row.clearingRate;
+          mnt = lots * row.lotSize * price * row.maintenanceRate;
+          ini = lots * row.lotSize * price * row.initialRate;
+        }
+      }
+
+      const fmtAmt = (n) => n > 0 ? `$${formatNum(Math.round(n))}` : '<span class="empty">—</span>';
+      const priceDisplay = isEtf
+        ? '<span style="color:var(--text-tertiary);font-size:0.78rem">固定金額</span>'
+        : (price > 0
+          ? `<span>${formatNum(price)}</span><span class="price-time">${row.priceLabel || ''} ${row.priceTime || ''}</span>`
+          : '<span style="color:var(--text-tertiary)">待更新</span>');
+
+      tr.className = '';
+      tr.innerHTML = `
+    <td class="cell-name" title="${escHtml(row.contractName)}">${escHtml(row.contractName)}</td>
+    <td class="cell-code">${escHtml(row.stockCode)}</td>
+    <td style="text-align:center">${typeTag || '<span class="cell-tag" style="background:rgba(88,166,255,0.1);color:var(--accent-blue);border:1px solid rgba(88,166,255,0.2)">股期</span>'}</td>
+    <td class="cell-price">
+      <div class="price-input-wrap">
+        ${isEtf
+          ? priceDisplay
+          : `<input type="number" class="price-input" id="price-${i}" value="${price > 0 ? price : ''}"
+               placeholder="輸入股價" min="0" step="0.5"
+               onchange="onPriceChange(${i}, this.value)"
+               title="可手動輸入或點擊 ↺ 更新">
+             <button class="btn-refresh-price" data-refresh="${i}" onclick="refreshRowPrice(${i})" title="更新即時股價">↺</button>`
+        }
+      </div>
+      ${isEtf ? '' : `<div class="price-time" style="padding-left:2px">${row.priceLabel || ''} ${row.priceTime || ''}</div>`}
+    </td>
+    <td style="text-align:right">
+      <input type="number" class="lot-input" id="lot-${i}" value="${escHtml(row.lots)}"
+         placeholder="1" min="1" step="1"
+         onchange="onLotChange(${i}, this.value)">
+    </td>
+    <td class="cell-amount clearing">${fmtAmt(clr)}</td>
+    <td class="cell-amount maintenance">${fmtAmt(mnt)}</td>
+    <td class="cell-amount initial">${fmtAmt(ini)}</td>
+    <td style="text-align:center">
+      <button class="btn-delete" onclick="deleteRow(${i})" title="刪除此列">✕</button>
+    </td>`;
+    }
+
+    function onLotChange(i, val) {
+      if (!STATE.rows[i]) return;
+      const n = parseInt(val);
+      STATE.rows[i].lots = (n > 0) ? String(n) : '';
+      saveToStorage();
+      renderRow(i);
+      calcSummary();
+    }
+
+    function onPriceChange(i, val) {
+      if (!STATE.rows[i]) return;
+      const n = parseFloat(val);
+      STATE.rows[i].price = (n > 0) ? n : null;
+      STATE.rows[i].priceTime = '';
+      STATE.rows[i].priceLabel = '手動輸入';
+      saveToStorage();
+      renderRow(i);
+      calcSummary();
+    }
+
+    function deleteRow(i) {
+      STATE.rows[i] = null;
+      saveToStorage();
+      renderRow(i);
+      calcSummary();
+    }
+
+    /* ─────────────────────────────
+       總計
+    ───────────────────────────── */
+    function calcSummary() {
+      let sumC = 0, sumM = 0, sumI = 0;
+
+      STATE.rows.forEach(row => {
+        if (!row) return;
+        const lots = parseFloat(row.lots) || 0;
+        const price = parseFloat(row.price) || 0;
+        if (lots <= 0) return;
+
+        if (row.type === 'etf') {
+          sumC += lots * row.clearingFixed;
+          sumM += lots * row.maintenanceFixed;
+          sumI += lots * row.initialFixed;
+        } else if (price > 0) {
+          sumC += lots * row.lotSize * price * row.clearingRate;
+          sumM += lots * row.lotSize * price * row.maintenanceRate;
+          sumI += lots * row.lotSize * price * row.initialRate;
+        }
+      });
+
+      document.getElementById('sum-clearing').textContent = `$${formatNum(Math.round(sumC))}`;
+      document.getElementById('sum-maintenance').textContent = `$${formatNum(Math.round(sumM))}`;
+      document.getElementById('sum-initial').textContent = `$${formatNum(Math.round(sumI))}`;
+    }
+
+    /* ─────────────────────────────
+       localStorage
+    ───────────────────────────── */
+    function saveToStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE.rows));
+      } catch (e) {
+        console.warn('localStorage 寫入失敗', e);
+      }
+    }
+
+    function loadFromStorage() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        if (Array.isArray(saved) && saved.length === MAX_ROWS) {
+          STATE.rows = saved;
+        }
+      } catch (e) {
+        console.warn('localStorage 讀取失敗', e);
+      }
+    }
+
+    /* ─────────────────────────────
+       UI 工具
+    ───────────────────────────── */
+    function setStatus(type, text) {
+      const dot = document.getElementById('status-dot');
+      const txt = document.getElementById('status-text');
+      dot.className = `status-dot ${type === 'ok' ? '' : type}`;
+      txt.textContent = text;
+    }
+
+    function showToast(msg, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      const icon = { success: '✓', error: '✕', info: 'ℹ' }[type] || 'ℹ';
+      toast.innerHTML = `<span>${icon}</span><span>${escHtml(msg)}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+
+    function formatNum(n) {
+      if (n === null || n === undefined || isNaN(n)) return '—';
+      return Number(n).toLocaleString('zh-TW');
+    }
+
+    function escHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
+
+</body>
+
+</html>

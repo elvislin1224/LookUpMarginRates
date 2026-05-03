@@ -1,0 +1,437 @@
+/**
+ * UI 應用邏輯
+ * 實現搜尋、顯示、計算等功能
+ */
+
+import {
+  loadLocalData,
+  isDataFresh,
+  normalizeMarginData,
+  searchFutures,
+  findByStockCode,
+} from '../logic/dataLoader';
+import { calculateMargin, calculateSummary } from '../logic/marginCalculator';
+import { formatNumber, formatPercentage, debounce, ToastManager } from '../logic/utils';
+import type { MarginItem, CalculationResult } from '../logic/types';
+
+// 全域狀態
+let marginData: MarginItem[] = [];
+let selectedItem: MarginItem | null = null;
+let calculationList: CalculationResult[] = [];
+
+// UI 管理器
+const toast = new ToastManager();
+
+/**
+ * 初始化應用程式
+ */
+export async function initApp() {
+  try {
+    console.log('[App] 開始初始化應用程式...');
+    
+    // 顯示載入狀態
+    updateStatus('loading', '正在載入保證金資料...');
+    
+    // 嘗試載入本地資料
+    const localData = await loadLocalData();
+    
+    if (localData && isDataFresh(localData.last_updated)) {
+      // 使用本地資料
+      marginData = normalizeMarginData(localData.futures);
+      updateStatus('success', `資料已載入（${localData.data_date}）- ${marginData.length} 筆期貨`);
+      console.log(`[App] ✓ 使用本地資料：${marginData.length} 筆`);
+    } else {
+      // 本地資料不存在或已過期
+      updateStatus('warning', '本地資料不可用，請執行 npm run fetch-data');
+      console.warn('[App] ⚠ 本地資料不可用');
+      toast.show('請先執行 npm run fetch-data 下載保證金資料', 'info', 5000);
+    }
+    
+    // 啟用搜尋框
+    const searchInput = document.getElementById('search-input') as HTMLInputElement;
+    if (searchInput && marginData.length > 0) {
+      searchInput.placeholder = '搜尋股票代碼或名稱...';
+      console.log('[App] ✓ 搜尋功能已啟用');
+    }
+    
+    // 初始化計算表
+    initCalculationTable();
+    
+  } catch (error) {
+    console.error('[App] ✗ 初始化失敗:', error);
+    updateStatus('error', '初始化失敗');
+    toast.show('應用程式初始化失敗，請重新整理頁面', 'error', 5000);
+  }
+}
+
+/**
+ * 初始化事件監聽器
+ */
+export function initEventListeners() {
+  console.log('[App] 設定事件監聽器...');
+  
+  // 搜尋框輸入事件 (使用 debounce 優化)
+  const searchInput = document.getElementById('search-input') as HTMLInputElement;
+  if (searchInput) {
+    searchInput.addEventListener('input', debounce(handleSearchInput, 200));
+    searchInput.addEventListener('focus', handleSearchFocus);
+    searchInput.addEventListener('blur', handleSearchBlur);
+  }
+  
+  // 帶入計算按鈕
+  const addBtn = document.getElementById('add-to-calc-btn');
+  if (addBtn) {
+    addBtn.addEventListener('click', handleAddToCalculation);
+  }
+  
+  // 點擊外部關閉下拉選單
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    const searchWrap = document.querySelector('.search-wrap');
+    if (searchWrap && !searchWrap.contains(target)) {
+      hideDropdown();
+    }
+  });
+}
+
+/**
+ * 處理搜尋輸入
+ */
+function handleSearchInput(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const query = input.value.trim();
+  
+  console.log(`[Search] 搜尋: "${query}"`);
+  
+  if (query.length === 0) {
+    hideDropdown();
+    return;
+  }
+  
+  // 搜尋期貨
+  const results = searchFutures(marginData, query, 10);
+  console.log(`[Search] 找到 ${results.length} 筆結果`);
+  
+  if (results.length === 0) {
+    showDropdown([]);
+    return;
+  }
+  
+  // 顯示搜尋結果
+  showDropdown(results.map(r => r.item));
+  
+  // 如果只有一個結果，自動選擇（優化項目3）
+  if (results.length === 1) {
+    setTimeout(() => selectMarginItem(results[0].item), 300);
+  }
+}
+
+/**
+ * 處理搜尋框獲得焦點
+ */
+function handleSearchFocus() {
+  const searchInput = document.getElementById('search-input') as HTMLInputElement;
+  if (searchInput && searchInput.value.trim()) {
+    handleSearchInput({ target: searchInput } as any);
+  }
+}
+
+/**
+ * 處理搜尋框失去焦點
+ */
+function handleSearchBlur() {
+  // 延遲關閉，讓點擊事件能觸發
+  setTimeout(() => hideDropdown(), 200);
+}
+
+/**
+ * 顯示下拉選單
+ */
+function showDropdown(items: MarginItem[]) {
+  const dropdown = document.getElementById('search-dropdown');
+  if (!dropdown) return;
+  
+  if (items.length === 0) {
+    dropdown.innerHTML = '<div class="dropdown-empty">沒有找到相關期貨</div>';
+    dropdown.classList.add('show');
+    return;
+  }
+  
+  dropdown.innerHTML = items.map(item => `
+    <div class="dropdown-item" data-code="${item.contractCode}">
+      <div class="dropdown-item-name">${item.contractName}</div>
+      <div class="dropdown-item-info">
+        代碼：${item.stockCode} | 
+        每口：${item.lotSize} 股 | 
+        ${item.type === 'stock' ? 
+          `保證金：${formatPercentage(item.initialRate || 0)}` : 
+          `保證金：$${formatNumber(item.initialFixed || 0)}`
+        }
+      </div>
+    </div>
+  `).join('');
+  
+  dropdown.classList.add('show');
+  
+  // 為每個項目添加點擊事件
+  dropdown.querySelectorAll('.dropdown-item').forEach(el => {
+    el.addEventListener('click', (e) => {
+      const code = (e.currentTarget as HTMLElement).dataset.code;
+      const item = items.find(i => i.contractCode === code);
+      if (item) {
+        selectMarginItem(item);
+        hideDropdown();
+      }
+    });
+  });
+}
+
+/**
+ * 隱藏下拉選單
+ */
+function hideDropdown() {
+  const dropdown = document.getElementById('search-dropdown');
+  if (dropdown) {
+    dropdown.classList.remove('show');
+  }
+}
+
+/**
+ * 選擇保證金項目（優化項目3：自動帶出資訊）
+ */
+function selectMarginItem(item: MarginItem) {
+  console.log(`[Select] 選擇: ${item.contractName}`);
+  
+  selectedItem = item;
+  
+  // 更新輸入框
+  const searchInput = document.getElementById('search-input') as HTMLInputElement;
+  if (searchInput) {
+    searchInput.value = item.contractName;
+  }
+  
+  // 顯示保證金資訊
+  displayMarginInfo(item);
+  
+  // 隱藏 placeholder，顯示內容
+  const placeholder = document.querySelector('.result-placeholder') as HTMLElement;
+  const content = document.querySelector('.result-content') as HTMLElement;
+  if (placeholder) placeholder.style.display = 'none';
+  if (content) content.style.display = 'block';
+}
+
+/**
+ * 顯示保證金資訊
+ */
+function displayMarginInfo(item: MarginItem) {
+  // 合約類型標籤
+  const typeBadge = document.getElementById('result-type-badge');
+  if (typeBadge) {
+    if (item.contractName.includes('小型')) {
+      typeBadge.textContent = '小型期貨';
+      typeBadge.className = 'result-type-badge small';
+    } else if (item.type === 'etf') {
+      typeBadge.textContent = 'ETF 期貨';
+      typeBadge.className = 'result-type-badge etf';
+    } else {
+      typeBadge.textContent = '一般股票期貨';
+      typeBadge.className = 'result-type-badge stock';
+    }
+  }
+  
+  // 合約名稱
+  const contractName = document.getElementById('result-contract-name');
+  if (contractName) contractName.textContent = item.contractName;
+  
+  // 股票代碼
+  const contractSub = document.getElementById('result-contract-sub');
+  if (contractSub) contractSub.textContent = `代碼：${item.stockCode}`;
+  
+  // 每口股數
+  const lotSize = document.getElementById('result-lot-size');
+  if (lotSize) lotSize.textContent = item.lotSize.toString();
+  
+  // 保證金比例/金額
+  if (item.type === 'stock') {
+    document.getElementById('result-clearing')!.textContent = formatPercentage(item.clearingRate || 0);
+    document.getElementById('result-maintenance')!.textContent = formatPercentage(item.maintenanceRate || 0);
+    document.getElementById('result-initial')!.textContent = formatPercentage(item.initialRate || 0);
+  } else {
+    document.getElementById('result-clearing')!.textContent = `$${formatNumber(item.clearingFixed || 0)}`;
+    document.getElementById('result-maintenance')!.textContent = `$${formatNumber(item.maintenanceFixed || 0)}`;
+    document.getElementById('result-initial')!.textContent = `$${formatNumber(item.initialFixed || 0)}`;
+  }
+}
+
+/**
+ * 處理帶入計算
+ */
+function handleAddToCalculation() {
+  if (!selectedItem) {
+    toast.show('請先搜尋並選擇期貨', 'error');
+    return;
+  }
+  
+  if (calculationList.length >= 10) {
+    toast.show('最多只能同時計算 10 個合約', 'error');
+    return;
+  }
+  
+  // 添加到計算列表（預設 1 口，股價為 0 需使用者輸入）
+  const result = calculateMargin(selectedItem, 0, 1);
+  calculationList.push(result);
+  
+  // 更新計算表
+  renderCalculationTable();
+  updateSummary();
+  
+  toast.show(`已加入：${selectedItem.contractName}`, 'success');
+}
+
+/**
+ * 初始化計算表
+ */
+function initCalculationTable() {
+  const tbody = document.querySelector('.calc-table tbody');
+  if (!tbody) return;
+  
+  // 生成 10 個空行
+  tbody.innerHTML = Array(10).fill(0).map((_, index) => `
+    <tr class="empty-row" data-index="${index}">
+      <td>${index + 1}</td>
+      <td colspan="8" style="text-align: center; color: var(--text-tertiary); font-size: 0.85rem;">
+        尚未加入合約
+      </td>
+    </tr>
+  `).join('');
+}
+
+/**
+ * 渲染計算表
+ */
+function renderCalculationTable() {
+  const tbody = document.querySelector('.calc-table tbody');
+  if (!tbody) return;
+  
+  tbody.innerHTML = Array(10).fill(0).map((_, index) => {
+    const calc = calculationList[index];
+    if (!calc) {
+      return `
+        <tr class="empty-row" data-index="${index}">
+          <td>${index + 1}</td>
+          <td colspan="8" style="text-align: center; color: var(--text-tertiary); font-size: 0.85rem;">
+            尚未加入合約
+          </td>
+        </tr>
+      `;
+    }
+    
+    return `
+      <tr data-index="${index}">
+        <td>${index + 1}</td>
+        <td>${calc.contractName}</td>
+        <td>${calc.stockCode}</td>
+        <td>${calc.lotSize}</td>
+        <td>
+          <input type="number" class="calc-input" value="${calc.lots}" min="1" 
+            onchange="window.updateLots(${index}, this.value)" />
+        </td>
+        <td>
+          <input type="number" class="calc-input" value="${calc.price}" min="0" step="0.1"
+            onchange="window.updatePrice(${index}, this.value)" />
+        </td>
+        <td>$${formatNumber(calc.clearingMargin)}</td>
+        <td>$${formatNumber(calc.maintenanceMargin)}</td>
+        <td>$${formatNumber(calc.initialMargin)}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+/**
+ * 更新總計
+ */
+function updateSummary() {
+  if (calculationList.length === 0) {
+    document.getElementById('sum-clearing')!.textContent = '$0';
+    document.getElementById('sum-maintenance')!.textContent = '$0';
+    document.getElementById('sum-initial')!.textContent = '$0';
+    return;
+  }
+  
+  const summary = calculateSummary(calculationList);
+  document.getElementById('sum-clearing')!.textContent = `$${formatNumber(summary.totalClearing)}`;
+  document.getElementById('sum-maintenance')!.textContent = `$${formatNumber(summary.totalMaintenance)}`;
+  document.getElementById('sum-initial')!.textContent = `$${formatNumber(summary.totalInitial)}`;
+}
+
+/**
+ * 更新口數
+ */
+function updateLots(index: number, lots: string) {
+  const calc = calculationList[index];
+  if (!calc) return;
+  
+  const item = marginData.find(m => m.contractCode === calc.contractCode);
+  if (!item) return;
+  
+  const newCalc = calculateMargin(item, calc.price, parseInt(lots) || 1);
+  calculationList[index] = newCalc;
+  
+  renderCalculationTable();
+  updateSummary();
+}
+
+/**
+ * 更新股價
+ */
+function updatePrice(index: number, price: string) {
+  const calc = calculationList[index];
+  if (!calc) return;
+  
+  const item = marginData.find(m => m.contractCode === calc.contractCode);
+  if (!item) return;
+  
+  const newCalc = calculateMargin(item, parseFloat(price) || 0, calc.lots);
+  calculationList[index] = newCalc;
+  
+  renderCalculationTable();
+  updateSummary();
+}
+
+/**
+ * 更新狀態指示器（優化項目1）
+ */
+function updateStatus(status: 'loading' | 'success' | 'warning' | 'error', message: string) {
+  const statusDot = document.querySelector('.status-dot');
+  const statusText = document.getElementById('status-text');
+  
+  if (statusDot) {
+    statusDot.className = `status-dot ${status}`;
+  }
+  
+  if (statusText) {
+    const now = new Date();
+    const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    statusText.textContent = `${message} (${timeStr})`;
+  }
+}
+
+/**
+ * 測試股票代碼
+ */
+export function testStockCodes(codes: string[]) {
+  console.log('\n[Test] 測試股票代碼:', codes);
+  codes.forEach(code => {
+    const item = findByStockCode(marginData, code);
+    if (item) {
+      console.log(`  ✓ ${code}: ${item.contractName}`);
+    } else {
+      console.log(`  ✗ ${code}: 找不到`);
+    }
+  });
+}
+
+// 暴露給全域使用
+(window as any).updateLots = updateLots;
+(window as any).updatePrice = updatePrice;
