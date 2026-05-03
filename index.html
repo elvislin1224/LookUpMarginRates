@@ -1287,6 +1287,25 @@
       setStatus('loading', '載入保證金資料中...');
       
       try {
+        // 優先嘗試讀取本地 JSON（24 小時快取）
+        const localData = await loadLocalJSON();
+        
+        if (localData && isDataFresh(localData.last_updated)) {
+          console.log('✓ 使用本地快取資料');
+          STATE.futures = localData.futures || [];
+          STATE.dataDate = localData.data_date || '';
+          
+          console.log(`✓ 系統就緒！資料日期：${STATE.dataDate} (快取)`);
+          setStatus('ok', `資料已更新 ${STATE.dataDate} (快取)`);
+          document.getElementById('search-input').disabled = false;
+          document.getElementById('search-input').placeholder = '輸入股票代碼或名稱（如：2330、台積電）';
+          showToast('本地資料載入成功！', 'success');
+          return;
+        }
+        
+        // 本地資料不存在或已過期，使用線上 API
+        console.log('⚠ 本地資料不存在或已過期，使用線上 API...');
+        
         // 序列請求（避免同時觸發過多 Proxy 請求）+ 隨機延遲
         console.log('[Step 1/3] 載入股票期貨清單...');
         const ssfList = await fetchWithProxy(`${TAIFEX_BASE}/SSFLists`);
@@ -1311,7 +1330,7 @@
         setStatus('ok', `資料已更新 ${STATE.dataDate}`);
         document.getElementById('search-input').disabled = false;
         document.getElementById('search-input').placeholder = '輸入股票代碼或名稱（如：2330、台積電）';
-        showToast('資料載入成功！', 'success');
+        showToast('線上資料載入成功！', 'success');
 
       } catch (err) {
         console.error('=== 資料載入失敗 ===');
@@ -1319,6 +1338,59 @@
         console.error('Stack trace:', err.stack);
         setStatus('error', '資料載入失敗，請重整頁面');
         showToast(`載入失敗：${err.message}`, 'error');
+      }
+    }
+
+    async function loadLocalJSON() {
+      /**
+       * 嘗試載入本地 JSON 檔案
+       * @returns {Object|null} JSON 資料或 null
+       */
+      try {
+        console.log('[Local] 嘗試讀取本地 JSON: data/margin_data.json');
+        const response = await fetch('data/margin_data.json', { cache: 'no-cache' });
+        
+        if (!response.ok) {
+          console.log('[Local] 本地檔案不存在或無法讀取');
+          return null;
+        }
+        
+        const data = await response.json();
+        console.log(`[Local] ✓ 本地 JSON 載入成功 (${data.total_count || 0} 筆資料)`);
+        console.log(`[Local] 資料更新時間：${data.last_updated}`);
+        console.log(`[Local] 資料日期：${data.data_date}`);
+        
+        return data;
+        
+      } catch (err) {
+        console.log(`[Local] 讀取本地 JSON 失敗: ${err.message}`);
+        return null;
+      }
+    }
+
+    function isDataFresh(lastUpdated, maxAgeHours = 24) {
+      /**
+       * 檢查資料是否在有效期內
+       * @param {string} lastUpdated - ISO 8601 時間字串
+       * @param {number} maxAgeHours - 最大有效時數（預設 24 小時）
+       * @returns {boolean}
+       */
+      if (!lastUpdated) return false;
+      
+      try {
+        const updateTime = new Date(lastUpdated);
+        const now = new Date();
+        const ageHours = (now - updateTime) / (1000 * 60 * 60);
+        
+        const isFresh = ageHours < maxAgeHours;
+        console.log(`[Cache] 資料年齡：${ageHours.toFixed(2)} 小時 (限制: ${maxAgeHours} 小時)`);
+        console.log(`[Cache] 資料狀態：${isFresh ? '✓ 有效' : '✗ 已過期'}`);
+        
+        return isFresh;
+        
+      } catch (err) {
+        console.warn(`[Cache] 時間解析錯誤: ${err.message}`);
+        return false;
       }
     }
 
