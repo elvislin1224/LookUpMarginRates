@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>股票期貨保證金查詢系統 v2.0</title>
+  <meta name="description" content="查詢台灣期貨交易所股票期貨保證金比例，即時計算所需保證金金額。資料來源：TAIFEX 官方公開 API。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script type="module" crossorigin src="/LookUpMarginRates/assets/main-3EPjRZ5N.js"></script>
+  <link rel="stylesheet" crossorigin href="/LookUpMarginRates/assets/main-B3E7LTDx.css">
+</head>
+
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-title-group">
+        <div class="header-icon">📊</div>
+        <div>
+          <h1 class="header-title">股票期貨保證金查詢系統</h1>
+          <div class="header-subtitle">Taiwan Stock Futures Margin Calculator v2.0</div>
+        </div>
+      </div>
+      <div class="header-meta">
+        <div class="status-badge">
+          <span class="status-dot loading"></span>
+          <span id="status-text">載入中...</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Grid -->
+    <div class="main-grid">
+      <!-- Left: Search Panel -->
+      <div class="search-panel">
+        <div class="card">
+          <div class="card-header">
+            🔍 搜尋期貨
+          </div>
+          <div class="card-body">
+            <div class="search-wrap">
+              <span class="search-icon">🔎</span>
+              <input type="text" id="search-input" class="search-input" placeholder="搜尋股票代碼或名稱...">
+              <div id="search-dropdown" class="dropdown"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Result Panel -->
+        <div class="card" style="margin-top: 20px;">
+          <div class="card-header">
+            📋 保證金資訊
+          </div>
+          <div class="card-body">
+            <div class="result-placeholder">
+              <div class="placeholder-icon">💡</div>
+              <div>請在上方搜尋框輸入股票代碼或名稱</div>
+            </div>
+
+            <div class="result-content">
+              <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px;">
+                <span id="result-type-badge" class="result-type-badge stock">一般股票期貨</span>
+                <div style="flex: 1;">
+                  <div id="result-contract-name" style="font-size: 1rem; font-weight: 600;">台積電期貨</div>
+                  <div id="result-contract-sub" style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 2px;">代碼：2330</div>
+                </div>
+              </div>
+
+              <div style="background: var(--bg-elevated); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 0.78rem;">
+                <div style="display: flex; gap: 6px;">
+                  <span style="color: var(--text-secondary);">每口股數</span>
+                  <span id="result-lot-size" style="color: var(--text-primary); font-weight: 500;">2000</span>
+                </div>
+              </div>
+
+              <div class="margin-grid">
+                <div class="margin-box">
+                  <div class="margin-box-label">結算保證金</div>
+                  <div id="result-clearing" class="margin-box-value clearing">13.50%</div>
+                </div>
+                <div class="margin-box">
+                  <div class="margin-box-label">維持保證金</div>
+                  <div id="result-maintenance" class="margin-box-value maintenance">13.50%</div>
+                </div>
+                <div class="margin-box">
+                  <div class="margin-box-label">原始保證金</div>
+                  <div id="result-initial" class="margin-box-value initial">15.75%</div>
+                </div>
+              </div>
+
+              <button id="add-to-calc-btn" class="btn-primary">➕ 帶入計算</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Calculation Table -->
+      <div class="calc-section">
+        <div class="card">
+          <div class="card-header">
+            🧮 保證金試算表（最多 10 口）
+          </div>
+          <div class="card-body">
+            <div class="calc-table-wrap">
+              <table class="calc-table">
+                <thead>
+                  <tr>
+                    <th style="width: 40px;">#</th>
+                    <th style="width: 180px;">合約名稱</th>
+                    <th style="width: 80px;">代碼</th>
+                    <th style="width: 80px;">每口股數</th>
+                    <th style="width: 80px;">口數</th>
+                    <th style="width: 100px;">股價</th>
+                    <th>結算保證金</th>
+                    <th>維持保證金</th>
+                    <th>原始保證金</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- 動態生成 -->
+                </tbody>
+                <tfoot>
+                  <tr class="summary-row">
+                    <td colspan="6" style="text-align: right; padding-right: 16px;">總計</td>
+                    <td id="sum-clearing">$0</td>
+                    <td id="sum-maintenance">$0</td>
+                    <td id="sum-initial">$0</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vite 會自動注入編譯後的 JS -->
+</body>
+
+</html>
