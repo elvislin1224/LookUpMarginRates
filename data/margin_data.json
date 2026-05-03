@@ -1,0 +1,99 @@
+{
+  "data": [
+    {
+      "code": "2330",
+      "name": "台積電期貨",
+      "type": "stock",
+      "contract_size": 2000,
+      "clearing_margin_ratio": 0.135,
+      "maintenance_margin_ratio": 0.135,
+      "initial_margin_ratio": 0.1575
+    },
+    {
+      "code": "2383",
+      "name": "小型台光電期貨",
+      "type": "mini",
+      "contract_size": 100,
+      "clearing_margin_ratio": 0.135,
+      "maintenance_margin_ratio": 0.135,
+      "initial_margin_ratio": 0.1575
+    },
+    {
+      "code": "2454",
+      "name": "聯發科期貨",
+      "type": "stock",
+      "contract_size": 2000,
+      "clearing_margin_ratio": 0.135,
+      "maintenance_margin_ratio": 0.135,
+      "initial_margin_ratio": 0.1575
+    },
+    {
+      "code": "2317",
+      "name": "鴻海期貨",
+      "type": "stock",
+      "contract_size": 2000,
+      "clearing_margin_ratio": 0.135,
+      "maintenance_margin_ratio": 0.135,
+      "initial_margin_ratio": 0.1575
+    },
+    {
+      "code": "2882",
+      "name": "國泰金期貨",
+      "type": "stock",
+      "contract_size": 2000,
+      "clearing_margin_ratio": 0.135,
+      "maintenance_margin_ratio": 0.135,
+      "initial_margin_ratio": 0.1575
+    },
+    {
+      "code": "2412",
+      "name": "中華電期貨",
+      "type": "stock",
+      "contract_size": 2000,
+      "clearing_margin_ratio": 0.135,
+      "maintenance_margin_ratio": 0.135,
+      "initial_margin_ratio": 0.1575
+    },
+    {
+      "code": "2308",
+      "name": "台達電期貨",
+      "type": "stock",
+      "contract_size": 2000,
+      "clearing_margin_ratio": 0.135,
+      "maintenance_margin_ratio": 0.135,
+      "initial_margin_ratio": 0.1575
+    },
+    {
+      "code": "2303",
+      "name": "聯電期貨",
+      "type": "stock",
+      "contract_size": 2000,
+      "clearing_margin_ratio": 0.135,
+      "maintenance_margin_ratio": 0.135,
+      "initial_margin_ratio": 0.1575
+    },
+    {
+      "code": "2891",
+      "name": "中信金期貨",
+      "type": "stock",
+      "contract_size": 2000,
+      "clearing_margin_ratio": 0.135,
+      "maintenance_margin_ratio": 0.135,
+      "initial_margin_ratio": 0.1575
+    },
+    {
+      "code": "2886",
+      "name": "兆豐金期貨",
+      "type": "stock",
+      "contract_size": 2000,
+      "clearing_margin_ratio": 0.135,
+      "maintenance_margin_ratio": 0.135,
+      "initial_margin_ratio": 0.1575
+    }
+  ],
+  "metadata": {
+    "last_updated": "2026-05-03T18:01:00+08:00",
+    "source": "Manual creation for testing",
+    "total_count": 10
+  }
+}
