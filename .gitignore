@@ -1,13 +1,72 @@
-# 忽略依賴套件（這是那 6000 多個變更的主因）
+# ===== 依賴套件 =====
 node_modules/
+.pnp
+.pnp.js
 
-# 忽略編譯後的產出（部署時會重新產生）
+# ===== 編譯產出 =====
 dist/
+build/
+.vite/
+*.tsbuildinfo
 
-# 忽略環境變數與私密資訊
+# ===== 環境變數與私密資訊 =====
 .env
-.env*.local
+.env.local
+.env.*.local
+.env.production.local
+*.key
+*.pem
 
-# 忽略日誌與系統雜物
-*.log
+# ===== IDE 和編輯器 =====
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# ===== 作業系統檔案 =====
 .DS_Store
+Thumbs.db
+Desktop.ini
+.directory
+$RECYCLE.BIN/
+
+# ===== 日誌檔案 =====
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ===== 測試和覆蓋率 =====
+coverage/
+.nyc_output/
+test-results/
+*.lcov
+
+# ===== 臨時檔案 =====
+*.tmp
+*.temp
+*.bak
+*.cache
+
+# ===== 開發工具 =====
+.eslintcache
+.stylelintcache
+.npm
+
+# ===== 專案特定 =====
+# 備份檔案
+*.md.bak
+*.ts.bak
+*.js.bak
+
+# 本地測試資料（如果有）
+test-data/
+temp/
