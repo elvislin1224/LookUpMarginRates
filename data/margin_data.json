@@ -1,99 +1,127 @@
 {
-  "data": [
+  "last_updated": "2026-05-03T18:01:00+08:00",
+  "data_date": "2026-05-03",
+  "total_count": 10,
+  "futures": [
     {
-      "code": "2330",
-      "name": "台積電期貨",
+      "contractCode": "TXF2330",
+      "contractName": "台積電期貨",
+      "stockCode": "2330",
+      "stockName": "台積電",
       "type": "stock",
-      "contract_size": 2000,
-      "clearing_margin_ratio": 0.135,
-      "maintenance_margin_ratio": 0.135,
-      "initial_margin_ratio": 0.1575
+      "lotSize": 2000,
+      "clearingRate": 0.135,
+      "maintenanceRate": 0.135,
+      "initialRate": 0.1575,
+      "_hasMargin": true
     },
     {
-      "code": "2383",
-      "name": "小型台光電期貨",
-      "type": "mini",
-      "contract_size": 100,
-      "clearing_margin_ratio": 0.135,
-      "maintenance_margin_ratio": 0.135,
-      "initial_margin_ratio": 0.1575
+      "contractCode": "TXF2383",
+      "contractName": "台光電小型期貨",
+      "stockCode": "2383",
+      "stockName": "台光電",
+      "type": "stock",
+      "lotSize": 100,
+      "clearingRate": 0.135,
+      "maintenanceRate": 0.135,
+      "initialRate": 0.1575,
+      "_hasMargin": true
     },
     {
-      "code": "2454",
-      "name": "聯發科期貨",
+      "contractCode": "TXF2454",
+      "contractName": "聯發科期貨",
+      "stockCode": "2454",
+      "stockName": "聯發科",
       "type": "stock",
-      "contract_size": 2000,
-      "clearing_margin_ratio": 0.135,
-      "maintenance_margin_ratio": 0.135,
-      "initial_margin_ratio": 0.1575
+      "lotSize": 2000,
+      "clearingRate": 0.135,
+      "maintenanceRate": 0.135,
+      "initialRate": 0.1575,
+      "_hasMargin": true
     },
     {
-      "code": "2317",
-      "name": "鴻海期貨",
+      "contractCode": "TXF2317",
+      "contractName": "鴻海期貨",
+      "stockCode": "2317",
+      "stockName": "鴻海",
       "type": "stock",
-      "contract_size": 2000,
-      "clearing_margin_ratio": 0.135,
-      "maintenance_margin_ratio": 0.135,
-      "initial_margin_ratio": 0.1575
+      "lotSize": 2000,
+      "clearingRate": 0.135,
+      "maintenanceRate": 0.135,
+      "initialRate": 0.1575,
+      "_hasMargin": true
     },
     {
-      "code": "2882",
-      "name": "國泰金期貨",
+      "contractCode": "TXF2882",
+      "contractName": "國泰金期貨",
+      "stockCode": "2882",
+      "stockName": "國泰金",
       "type": "stock",
-      "contract_size": 2000,
-      "clearing_margin_ratio": 0.135,
-      "maintenance_margin_ratio": 0.135,
-      "initial_margin_ratio": 0.1575
+      "lotSize": 2000,
+      "clearingRate": 0.135,
+      "maintenanceRate": 0.135,
+      "initialRate": 0.1575,
+      "_hasMargin": true
     },
     {
-      "code": "2412",
-      "name": "中華電期貨",
+      "contractCode": "TXF2412",
+      "contractName": "中華電期貨",
+      "stockCode": "2412",
+      "stockName": "中華電",
       "type": "stock",
-      "contract_size": 2000,
-      "clearing_margin_ratio": 0.135,
-      "maintenance_margin_ratio": 0.135,
-      "initial_margin_ratio": 0.1575
+      "lotSize": 2000,
+      "clearingRate": 0.135,
+      "maintenanceRate": 0.135,
+      "initialRate": 0.1575,
+      "_hasMargin": true
     },
     {
-      "code": "2308",
-      "name": "台達電期貨",
+      "contractCode": "TXF2308",
+      "contractName": "台達電期貨",
+      "stockCode": "2308",
+      "stockName": "台達電",
       "type": "stock",
-      "contract_size": 2000,
-      "clearing_margin_ratio": 0.135,
-      "maintenance_margin_ratio": 0.135,
-      "initial_margin_ratio": 0.1575
+      "lotSize": 2000,
+      "clearingRate": 0.135,
+      "maintenanceRate": 0.135,
+      "initialRate": 0.1575,
+      "_hasMargin": true
     },
     {
-      "code": "2303",
-      "name": "聯電期貨",
+      "contractCode": "TXF2303",
+      "contractName": "聯電期貨",
+      "stockCode": "2303",
+      "stockName": "聯電",
       "type": "stock",
-      "contract_size": 2000,
-      "clearing_margin_ratio": 0.135,
-      "maintenance_margin_ratio": 0.135,
-      "initial_margin_ratio": 0.1575
+      "lotSize": 2000,
+      "clearingRate": 0.135,
+      "maintenanceRate": 0.135,
+      "initialRate": 0.1575,
+      "_hasMargin": true
     },
     {
-      "code": "2891",
-      "name": "中信金期貨",
+      "contractCode": "TXF2891",
+      "contractName": "中信金期貨",
+      "stockCode": "2891",
+      "stockName": "中信金",
       "type": "stock",
-      "contract_size": 2000,
-      "clearing_margin_ratio": 0.135,
-      "maintenance_margin_ratio": 0.135,
-      "initial_margin_ratio": 0.1575
+      "lotSize": 2000,
+      "clearingRate": 0.135,
+      "maintenanceRate": 0.135,
+      "initialRate": 0.1575,
+      "_hasMargin": true
     },
     {
-      "code": "2886",
-      "name": "兆豐金期貨",
+      "contractCode": "TXF2886",
+      "contractName": "兆豐金期貨",
+      "stockCode": "2886",
+      "stockName": "兆豐金",
       "type": "stock",
-      "contract_size": 2000,
-      "clearing_margin_ratio": 0.135,
-      "maintenance_margin_ratio": 0.135,
-      "initial_margin_ratio": 0.1575
+      "lotSize": 2000,
+      "clearingRate": 0.135,
+      "maintenanceRate": 0.135,
+      "initialRate": 0.1575,
+      "_hasMargin": true
     }
-  ],
-  "metadata": {
-    "last_updated": "2026-05-03T18:01:00+08:00",
-    "source": "Manual creation for testing",
-    "total_count": 10
-  }
+  ]
 }

@@ -204,7 +204,7 @@ body {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  overflow: visible;
   box-shadow: var(--shadow-card);
 }
 
@@ -231,10 +231,12 @@ body {
 ============================= */
 .search-panel {
   position: relative;
+  z-index: 10;
 }
 
 .search-wrap {
   position: relative;
+  z-index: 100;
 }
 
 .search-input {

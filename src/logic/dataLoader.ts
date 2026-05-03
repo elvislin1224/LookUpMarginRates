@@ -12,8 +12,8 @@ import { identifyContractSize } from './contractSize';
  */
 export async function loadLocalData(): Promise<MarginDataResponse | null> {
   try {
-    console.log('[DataLoader] 嘗試載入本地資料: /margin_data.json');
-    const response = await fetch('/margin_data.json');
+    console.log('[DataLoader] 嘗試載入本地資料: /LookUpMarginRates/margin_data.json');
+    const response = await fetch('/LookUpMarginRates/margin_data.json');
     
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
