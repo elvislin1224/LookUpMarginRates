@@ -1180,7 +1180,14 @@
       url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
       url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
       url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+      url => `https://cors-anywhere.herokuapp.com/${url}`,
     ];
+
+    // 隨機延遲函數（符合合法爬蟲禮節）
+    function randomDelay(min = 300, max = 800) {
+      const delay = Math.floor(Math.random() * (max - min + 1)) + min;
+      return new Promise(resolve => setTimeout(resolve, delay));
+    }
 
     /* ─────────────────────────────
        初始化
@@ -1195,37 +1202,104 @@
     /* ─────────────────────────────
        資料載入
     ───────────────────────────── */
-    async function fetchWithProxy(url) {
+    async function fetchWithProxy(url, retries = 3) {
+      const logPrefix = `[API] ${url.split('/').pop()}`;
+      
       // 1. 先嘗試直接請求（若 CORS 允許）
       try {
+        console.log(`${logPrefix}: 嘗試直接請求...`);
         const r = await fetch(url, { cache: 'no-cache', signal: AbortSignal.timeout(8000) });
-        if (r.ok) return await r.json();
-      } catch { /* CORS 阻擋，改用 Proxy */ }
-
-      // 2. 依序嘗試備援 Proxy
-      for (const makeUrl of CORS_PROXIES) {
-        try {
-          const proxyUrl = makeUrl(url);
-          const r = await fetch(proxyUrl, { cache: 'no-cache', signal: AbortSignal.timeout(10000) });
-          if (!r.ok) continue;
-          const text = await r.text();
-          // allorigins 有時回傳 JSON wrapped，需解包
-          try { return JSON.parse(text); } catch { continue; }
-        } catch { /* 嘗試下一個 Proxy */ }
+        if (r.ok) {
+          const data = await r.json();
+          console.log(`${logPrefix}: ✓ 直接請求成功 (${data.length} 筆資料)`);
+          return data;
+        }
+      } catch (err) {
+        console.log(`${logPrefix}: ✗ 直接請求失敗 (CORS限制)，切換至 Proxy 模式`);
       }
-      throw new Error('所有 CORS Proxy 均失敗');
+
+      // 2. 依序嘗試備援 Proxy（含重試機制）
+      for (let attempt = 1; attempt <= retries; attempt++) {
+        for (let i = 0; i < CORS_PROXIES.length; i++) {
+          const makeUrl = CORS_PROXIES[i];
+          const proxyName = ['AllOrigins', 'CodeTabs', 'CORSProxy', 'CORS Anywhere'][i];
+          
+          try {
+            // 添加隨機延遲（合法爬蟲禮節）
+            if (attempt > 1 || i > 0) {
+              await randomDelay(300, 800);
+            }
+            
+            console.log(`${logPrefix}: [嘗試 ${attempt}/${retries}] 使用 ${proxyName}...`);
+            const proxyUrl = makeUrl(url);
+            const r = await fetch(proxyUrl, { 
+              cache: 'no-cache', 
+              signal: AbortSignal.timeout(12000),
+              headers: { 'Accept': 'application/json' }
+            });
+            
+            if (!r.ok) {
+              console.warn(`${logPrefix}: ${proxyName} HTTP ${r.status}`);
+              continue;
+            }
+            
+            const text = await r.text();
+            
+            // allorigins 可能回傳 JSON wrapped 格式
+            let data;
+            try {
+              data = JSON.parse(text);
+              // 檢查是否為 allorigins 的包裝格式
+              if (data.contents) {
+                data = JSON.parse(data.contents);
+              }
+            } catch (parseErr) {
+              console.warn(`${logPrefix}: ${proxyName} JSON 解析失敗`);
+              continue;
+            }
+            
+            // 驗證資料格式
+            if (!Array.isArray(data) || data.length === 0) {
+              console.warn(`${logPrefix}: ${proxyName} 回傳資料格式異常`);
+              continue;
+            }
+            
+            console.log(`${logPrefix}: ✓ ${proxyName} 成功 (${data.length} 筆資料)`);
+            return data;
+            
+          } catch (err) {
+            console.warn(`${logPrefix}: ${proxyName} 錯誤 - ${err.message}`);
+          }
+        }
+        
+        if (attempt < retries) {
+          const waitTime = attempt * 1000;
+          console.log(`${logPrefix}: 所有 Proxy 失敗，等待 ${waitTime}ms 後重試...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+      }
+      
+      throw new Error(`${logPrefix}: 所有 CORS Proxy 均失敗 (已重試 ${retries} 次)`);
     }
 
     async function loadAllData() {
+      console.log('=== 開始載入 TAIFEX 資料 ===');
       setStatus('loading', '載入保證金資料中...');
+      
       try {
-        // 並行請求三支 API
-        const [ssfList, stockMargin, etfMargin] = await Promise.all([
-          fetchWithProxy(`${TAIFEX_BASE}/SSFLists`),
-          fetchWithProxy(`${TAIFEX_BASE}/SingleStockFuturesMargining`),
-          fetchWithProxy(`${TAIFEX_BASE}/SingleStockFuturesETFMargining`),
-        ]);
+        // 序列請求（避免同時觸發過多 Proxy 請求）+ 隨機延遲
+        console.log('[Step 1/3] 載入股票期貨清單...');
+        const ssfList = await fetchWithProxy(`${TAIFEX_BASE}/SSFLists`);
+        
+        await randomDelay(500, 1000);
+        console.log('[Step 2/3] 載入股票期貨保證金...');
+        const stockMargin = await fetchWithProxy(`${TAIFEX_BASE}/SingleStockFuturesMargining`);
+        
+        await randomDelay(500, 1000);
+        console.log('[Step 3/3] 載入 ETF 期貨保證金...');
+        const etfMargin = await fetchWithProxy(`${TAIFEX_BASE}/SingleStockFuturesETFMargining`);
 
+        console.log('=== 資料載入完成，開始建立索引 ===');
         buildFuturesIndex(ssfList, stockMargin, etfMargin);
 
         // 取得保證金資料日期
@@ -1233,14 +1307,18 @@
           STATE.dataDate = formatDate(stockMargin[0].Date);
         }
 
+        console.log(`✓ 系統就緒！資料日期：${STATE.dataDate}`);
         setStatus('ok', `資料已更新 ${STATE.dataDate}`);
         document.getElementById('search-input').disabled = false;
         document.getElementById('search-input').placeholder = '輸入股票代碼或名稱（如：2330、台積電）';
+        showToast('資料載入成功！', 'success');
 
       } catch (err) {
-        console.error(err);
+        console.error('=== 資料載入失敗 ===');
+        console.error('錯誤詳情:', err);
+        console.error('Stack trace:', err.stack);
         setStatus('error', '資料載入失敗，請重整頁面');
-        showToast('無法連線至 TAIFEX API，請確認網路連線', 'error');
+        showToast(`載入失敗：${err.message}`, 'error');
       }
     }
 
