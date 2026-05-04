@@ -15,15 +15,15 @@ jobs:
     steps:
       # 步驟 1：檢出代碼
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       
       # 步驟 2：設定 Python 環境
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.11'
       
       # 步驟 3：安裝依賴
       - name: Install dependencies
