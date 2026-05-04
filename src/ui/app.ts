@@ -5,7 +5,6 @@
 
 import {
   loadLocalData,
-  isDataFresh,
   normalizeMarginData,
   searchFutures,
   findByStockCode,
@@ -31,8 +30,8 @@ import {
   saveCalculationList, 
   loadCalculationList 
 } from '../logic/storageManager';
-import { updateMultiplePrices, getSourceDisplayName } from '../logic/priceUpdater';
-import type { MarginItem, CalculationResult, RiskMetrics } from '../logic/types';
+import { updateMultiplePrices } from '../logic/priceUpdater';
+import type { MarginItem, CalculationResult } from '../logic/types';
 
 // 全域狀態
 let marginData: MarginItem[] = [];
