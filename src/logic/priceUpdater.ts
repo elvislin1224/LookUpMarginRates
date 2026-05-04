@@ -1,9 +1,19 @@
 /**
  * 股價更新邏輯
  * 從 TWSE（優先）或 Yahoo Finance（備選）爬取股價
+ * 使用 CORS Proxy 解決跨域問題
  */
 
 import type { PriceUpdateResult, PriceSource } from './types';
+
+/**
+ * CORS Proxy 列表（備援機制）
+ */
+const CORS_PROXIES = [
+  'https://api.allorigins.win/get?url=',
+  'https://cors-anywhere.herokuapp.com/',
+  'https://thingproxy.freeboard.io/fetch/',
+];
 
 /**
  * 隨機延遲（符合爬蟲禮節）
@@ -14,7 +24,62 @@ function randomDelay(min = 500, max = 1500): Promise<void> {
 }
 
 /**
- * 從 TWSE API 爬取股價
+ * 使用 CORS Proxy 抓取資料
+ */
+async function fetchWithProxy(url: string, timeout = 10000): Promise<any> {
+  let lastError: Error | null = null;
+  
+  // 嘗試每個 CORS Proxy
+  for (let i = 0; i < CORS_PROXIES.length; i++) {
+    const proxy = CORS_PROXIES[i];
+    
+    try {
+      console.log(`[PriceUpdater] 嘗試 Proxy ${i + 1}/${CORS_PROXIES.length}: ${proxy.substring(0, 30)}...`);
+      
+      const proxyUrl = proxy + encodeURIComponent(url);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+      
+      const response = await fetch(proxyUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // 處理 allorigins 的包裝格式
+      if (data.contents) {
+        return JSON.parse(data.contents);
+      }
+      
+      return data;
+      
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      console.warn(`[PriceUpdater] Proxy ${i + 1} 失敗:`, error);
+      
+      // 等待後重試下一個 Proxy
+      if (i < CORS_PROXIES.length - 1) {
+        await randomDelay(500, 1000);
+      }
+    }
+  }
+  
+  throw lastError || new Error('所有 CORS Proxy 均失敗');
+}
+
+/**
+ * 從 TWSE API 爬取股價（使用 CORS Proxy）
  * API 文件: https://openapi.twse.com.tw/
  */
 async function fetchPriceFromTWSE(stockCode: string): Promise<number | null> {
@@ -24,18 +89,8 @@ async function fetchPriceFromTWSE(stockCode: string): Promise<number | null> {
     // TWSE API 端點
     const url = `https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=tse_${stockCode}.tw&json=1&delay=0`;
     
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    
-    const data = await response.json();
+    // 使用 CORS Proxy 抓取
+    const data = await fetchWithProxy(url);
     
     // 解析回應資料
     if (data.msgArray && data.msgArray.length > 0) {
@@ -56,7 +111,7 @@ async function fetchPriceFromTWSE(stockCode: string): Promise<number | null> {
 }
 
 /**
- * 從 Yahoo Finance API 爬取股價
+ * 從 Yahoo Finance API 爬取股價（使用 CORS Proxy）
  */
 async function fetchPriceFromYahoo(stockCode: string): Promise<number | null> {
   try {
@@ -66,18 +121,8 @@ async function fetchPriceFromYahoo(stockCode: string): Promise<number | null> {
     const symbol = `${stockCode}.TW`;
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}`;
     
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    
-    const data = await response.json();
+    // 使用 CORS Proxy 抓取
+    const data = await fetchWithProxy(url);
     
     // 解析回應資料
     if (data.chart?.result && data.chart.result.length > 0) {

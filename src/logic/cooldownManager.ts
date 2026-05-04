@@ -9,7 +9,7 @@ const COOLDOWN_KEYS = {
 };
 
 const COOLDOWN_DURATIONS = {
-  MARGIN: 60 * 60 * 1000, // 1 小時
+  MARGIN: 60 * 1000,       // 1 分鐘
   PRICE: 60 * 1000,        // 1 分鐘
 };
 
