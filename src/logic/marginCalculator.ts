@@ -100,3 +100,71 @@ export function validateCalculationParams(
 export function formatMarginAmount(amount: number): string {
   return Math.round(amount).toLocaleString('zh-TW');
 }
+
+/**
+ * 計算風險指標
+ * 
+ * @param equity - 權益總值
+ * @param totalInitialMargin - 原始保證金總計
+ * @returns 風險指標資訊
+ */
+export function calculateRiskMetrics(
+  equity: number,
+  totalInitialMargin: number
+): import('./types').RiskMetrics {
+  // 計算風險指標 = 權益總值 / 原始保證金
+  const riskRatio = totalInitialMargin > 0 ? equity / totalInitialMargin : 0;
+  
+  // 計算超額保證金（正數）或追繳金額（負數）
+  const excessMargin = equity - totalInitialMargin;
+  
+  // 判斷風險等級
+  let riskLevel: import('./types').RiskLevel;
+  if (riskRatio > 1.5) {
+    riskLevel = 'safe';      // >150%: 綠色（安全）
+  } else if (riskRatio >= 1.2) {
+    riskLevel = 'warning';   // 120%-150%: 黃色（警告）
+  } else {
+    riskLevel = 'danger';    // <120%: 紅色（危險）
+  }
+  
+  return {
+    equity,
+    totalInitialMargin,
+    riskRatio,
+    excessMargin,
+    riskLevel,
+  };
+}
+
+/**
+ * 根據風險指標值獲取風險等級
+ */
+export function getRiskLevel(riskRatio: number): import('./types').RiskLevel {
+  if (riskRatio > 1.5) {
+    return 'safe';
+  } else if (riskRatio >= 1.2) {
+    return 'warning';
+  } else {
+    return 'danger';
+  }
+}
+
+/**
+ * 獲取風險等級的顯示文字
+ */
+export function getRiskLevelText(riskLevel: import('./types').RiskLevel): string {
+  const texts: Record<import('./types').RiskLevel, string> = {
+    safe: '安全',
+    warning: '警告',
+    danger: '危險',
+  };
+  return texts[riskLevel];
+}
+
+/**
+ * 格式化風險指標百分比
+ */
+export function formatRiskRatio(ratio: number): string {
+  return `${(ratio * 100).toFixed(2)}%`;
+}

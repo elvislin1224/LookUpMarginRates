@@ -95,3 +95,35 @@ export interface SearchResult {
   item: MarginItem;
   relevance: number;            // 相關性分數
 }
+
+/**
+ * 風險等級
+ */
+export type RiskLevel = 'safe' | 'warning' | 'danger';
+
+/**
+ * 風險指標
+ */
+export interface RiskMetrics {
+  equity: number;                // 權益總值
+  totalInitialMargin: number;    // 原始保證金總計
+  riskRatio: number;             // 風險指標（權益/保證金）
+  excessMargin: number;          // 超額保證金（正數）或追繳金額（負數）
+  riskLevel: RiskLevel;          // 風險等級
+}
+
+/**
+ * 股價數據來源
+ */
+export type PriceSource = 'twse' | 'yahoo' | 'manual';
+
+/**
+ * 股價更新結果
+ */
+export interface PriceUpdateResult {
+  stockCode: string;
+  price: number | null;
+  source: PriceSource;
+  success: boolean;
+  error?: string;
+}

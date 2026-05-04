@@ -2,7 +2,7 @@
  * 應用程式入口點
  */
 
-import { initApp, initEventListeners, testStockCodes, updateMarginData } from './ui/app';
+import { initApp, initEventListeners, testStockCodes, updateMarginData, updateStockPrices } from './ui/app';
 import './ui/styles.css';
 
 // 當 DOM 準備就緒時初始化應用程式
@@ -17,11 +17,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 初始化應用程式（不自動載入資料）
   await initApp();
   
-  // 綁定更新按鈕事件
-  const updateBtn = document.getElementById('update-data-btn');
-  if (updateBtn) {
-    updateBtn.addEventListener('click', updateMarginData);
-    console.log('[Main] ✓ 更新按鈕事件已綁定');
+  // 綁定更新保證金按鈕事件
+  const updateDataBtn = document.getElementById('update-data-btn');
+  if (updateDataBtn) {
+    updateDataBtn.addEventListener('click', updateMarginData);
+    console.log('[Main] ✓ 更新保證金按鈕事件已綁定');
+  }
+  
+  // 綁定更新股價按鈕事件
+  const updatePriceBtn = document.getElementById('update-price-btn');
+  if (updatePriceBtn) {
+    updatePriceBtn.addEventListener('click', updateStockPrices);
+    console.log('[Main] ✓ 更新股價按鈕事件已綁定');
   }
   
   console.log('\n✓ 應用程式初始化完成！請點擊「更新保證金」按鈕載入資料');
@@ -30,3 +37,4 @@ document.addEventListener('DOMContentLoaded', async () => {
 // 將函數暴露到全域（方便在 Console 中使用）
 (window as any).testStockCodes = testStockCodes;
 (window as any).updateMarginData = updateMarginData;
+(window as any).updateStockPrices = updateStockPrices;

@@ -25,6 +25,9 @@
         <button id="update-data-btn" class="btn-update" title="點擊更新保證金資料">
           🔄 更新保證金
         </button>
+        <button id="update-price-btn" class="btn-update" title="點擊更新股價資料">
+          💰 更新股價
+        </button>
         <div class="status-badge">
           <span class="status-dot loading"></span>
           <span id="status-text">尚未載入</span>
@@ -131,6 +134,50 @@
                   </tr>
                 </tfoot>
               </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Risk Management Panel -->
+        <div class="card" style="margin-top: 20px;">
+          <div class="card-header">
+            ⚡ 風險管理
+          </div>
+          <div class="card-body">
+            <div class="risk-panel">
+              <div class="risk-input-group">
+                <label for="equity-input" class="risk-label">權益總值</label>
+                <div class="risk-input-wrapper">
+                  <span class="risk-currency">$</span>
+                  <input 
+                    type="number" 
+                    id="equity-input" 
+                    class="risk-input" 
+                    placeholder="請輸入您的權益總值" 
+                    min="0" 
+                    step="1000"
+                  />
+                </div>
+              </div>
+
+              <div id="risk-metrics" class="risk-metrics" style="display: none;">
+                <div class="risk-metric-item">
+                  <div class="risk-metric-label">風險指標</div>
+                  <div id="risk-ratio" class="risk-metric-value risk-safe">0.00%</div>
+                </div>
+                <div class="risk-metric-item">
+                  <div class="risk-metric-label">超額保證金</div>
+                  <div id="excess-margin" class="risk-metric-value">$0</div>
+                </div>
+                <div class="risk-metric-item">
+                  <div class="risk-metric-label">風險等級</div>
+                  <div id="risk-level-badge" class="risk-level-badge risk-safe">安全</div>
+                </div>
+              </div>
+
+              <div id="risk-placeholder" class="risk-placeholder">
+                請輸入權益總值以計算風險指標
+              </div>
             </div>
           </div>
         </div>

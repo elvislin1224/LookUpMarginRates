@@ -10,14 +10,36 @@ import {
   searchFutures,
   findByStockCode,
 } from '../logic/dataLoader';
-import { calculateMargin, calculateSummary } from '../logic/marginCalculator';
+import { 
+  calculateMargin, 
+  calculateSummary,
+  calculateRiskMetrics,
+  getRiskLevelText,
+  formatRiskRatio,
+} from '../logic/marginCalculator';
 import { formatNumber, formatPercentage, debounce, ToastManager } from '../logic/utils';
-import type { MarginItem, CalculationResult } from '../logic/types';
+import { 
+  checkMarginUpdateCooldown, 
+  checkPriceUpdateCooldown,
+  setMarginUpdateTime,
+  setPriceUpdateTime,
+  formatRemainingTime,
+} from '../logic/cooldownManager';
+import { 
+  saveEquity, 
+  loadEquity, 
+  saveCalculationList, 
+  loadCalculationList 
+} from '../logic/storageManager';
+import { updateMultiplePrices, getSourceDisplayName } from '../logic/priceUpdater';
+import type { MarginItem, CalculationResult, RiskMetrics } from '../logic/types';
 
 // 全域狀態
 let marginData: MarginItem[] = [];
 let selectedItem: MarginItem | null = null;
 let calculationList: CalculationResult[] = [];
+let currentEquity: number = 0;
+let cooldownTimers: { margin?: number; price?: number } = {};
 
 // UI 管理器
 const toast = new ToastManager();
@@ -32,8 +54,17 @@ export async function initApp() {
     // 顯示初始狀態（不自動載入資料）
     updateStatus('warning', '尚未載入資料，請點擊「更新保證金」按鈕');
     
+    // 恢復 localStorage 資料
+    restoreStoredData();
+    
     // 初始化計算表
     initCalculationTable();
+    
+    // 初始化風險管理面板
+    initRiskPanel();
+    
+    // 啟動冷卻倒計時
+    startCooldownTimers();
     
     console.log('[App] ✓ 應用程式初始化完成，等待手動更新資料');
     
@@ -49,6 +80,13 @@ export async function initApp() {
  */
 export async function updateMarginData() {
   const updateBtn = document.getElementById('update-data-btn') as HTMLButtonElement;
+  
+  // 檢查冷卻時間
+  const cooldownCheck = checkMarginUpdateCooldown();
+  if (!cooldownCheck.canUpdate) {
+    toast.show(cooldownCheck.message || '更新冷卻中', 'error', 3000);
+    return;
+  }
   
   try {
     console.log('[App] 開始手動更新保證金資料...');
@@ -71,6 +109,10 @@ export async function updateMarginData() {
       updateStatus('success', `資料已載入（${localData.data_date}）- ${marginData.length} 筆期貨`);
       console.log(`[App] ✓ 更新成功：${marginData.length} 筆`);
       toast.show(`✓ 成功載入 ${marginData.length} 筆期貨資料`, 'success', 3000);
+      
+      // 設置冷卻時間
+      setMarginUpdateTime();
+      startCooldownTimers();
       
       // 啟用搜尋框
       const searchInput = document.getElementById('search-input') as HTMLInputElement;
@@ -466,6 +508,257 @@ export function testStockCodes(codes: string[]) {
   });
 }
 
+/**
+ * 恢復 localStorage 中的資料
+ */
+function restoreStoredData() {
+  // 恢復權益總值
+  const savedEquity = loadEquity();
+  if (savedEquity !== null) {
+    currentEquity = savedEquity;
+    const equityInput = document.getElementById('equity-input') as HTMLInputElement;
+    if (equityInput) {
+      equityInput.value = savedEquity.toString();
+    }
+    console.log(`[App] ✓ 恢復權益總值: $${savedEquity.toLocaleString()}`);
+  }
+  
+  // 恢復計算列表
+  const savedList = loadCalculationList();
+  if (savedList && savedList.length > 0) {
+    calculationList = savedList;
+    renderCalculationTable();
+    updateSummary();
+    updateRiskMetrics();
+    console.log(`[App] ✓ 恢復計算列表: ${savedList.length} 項`);
+  }
+}
+
+/**
+ * 初始化風險管理面板
+ */
+function initRiskPanel() {
+  const equityInput = document.getElementById('equity-input') as HTMLInputElement;
+  if (equityInput) {
+    equityInput.addEventListener('input', debounce(handleEquityInput, 300));
+  }
+  
+  // 如果已有權益總值，顯示風險指標
+  if (currentEquity > 0) {
+    updateRiskMetrics();
+  }
+}
+
+/**
+ * 處理權益總值輸入
+ */
+function handleEquityInput(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const equity = parseFloat(input.value) || 0;
+  
+  currentEquity = equity;
+  
+  // 保存到 localStorage
+  if (equity > 0) {
+    saveEquity(equity);
+  }
+  
+  // 更新風險指標
+  updateRiskMetrics();
+}
+
+/**
+ * 更新風險指標顯示
+ */
+function updateRiskMetrics() {
+  const summary = calculateSummary(calculationList);
+  const totalInitialMargin = summary.totalInitial;
+  
+  const metricsDiv = document.getElementById('risk-metrics');
+  const placeholderDiv = document.getElementById('risk-placeholder');
+  
+  if (currentEquity <= 0 || totalInitialMargin <= 0) {
+    // 隱藏風險指標，顯示 placeholder
+    if (metricsDiv) metricsDiv.style.display = 'none';
+    if (placeholderDiv) placeholderDiv.style.display = 'block';
+    return;
+  }
+  
+  // 計算風險指標
+  const metrics = calculateRiskMetrics(currentEquity, totalInitialMargin);
+  
+  // 顯示風險指標
+  if (metricsDiv) metricsDiv.style.display = 'grid';
+  if (placeholderDiv) placeholderDiv.style.display = 'none';
+  
+  // 更新風險指標值
+  const riskRatioEl = document.getElementById('risk-ratio');
+  if (riskRatioEl) {
+    riskRatioEl.textContent = formatRiskRatio(metrics.riskRatio);
+    riskRatioEl.className = `risk-metric-value risk-${metrics.riskLevel}`;
+  }
+  
+  // 更新超額保證金
+  const excessMarginEl = document.getElementById('excess-margin');
+  if (excessMarginEl) {
+    const prefix = metrics.excessMargin >= 0 ? '+$' : '-$';
+    const absValue = Math.abs(metrics.excessMargin);
+    excessMarginEl.textContent = `${prefix}${formatNumber(absValue)}`;
+    excessMarginEl.className = `risk-metric-value ${metrics.excessMargin >= 0 ? 'positive' : 'negative'}`;
+  }
+  
+  // 更新風險等級標籤
+  const riskLevelBadge = document.getElementById('risk-level-badge');
+  if (riskLevelBadge) {
+    riskLevelBadge.textContent = getRiskLevelText(metrics.riskLevel);
+    riskLevelBadge.className = `risk-level-badge risk-${metrics.riskLevel}`;
+  }
+}
+
+/**
+ * 更新股價（從 TWSE 或 Yahoo Finance）
+ */
+export async function updateStockPrices() {
+  const updateBtn = document.getElementById('update-price-btn') as HTMLButtonElement;
+  
+  // 檢查是否有合約需要更新
+  if (calculationList.length === 0) {
+    toast.show('請先加入合約到試算表', 'error', 3000);
+    return;
+  }
+  
+  // 檢查冷卻時間
+  const cooldownCheck = checkPriceUpdateCooldown();
+  if (!cooldownCheck.canUpdate) {
+    toast.show(cooldownCheck.message || '更新冷卻中', 'error', 3000);
+    return;
+  }
+  
+  try {
+    console.log('[App] 開始更新股價...');
+    
+    // 禁用按鈕
+    if (updateBtn) {
+      updateBtn.disabled = true;
+      updateBtn.textContent = '⏳ 更新中...';
+    }
+    
+    // 顯示載入狀態
+    updateStatus('loading', '正在更新股價...');
+    
+    // 取得所有股票代碼
+    const stockCodes = [...new Set(calculationList.map(c => c.stockCode))];
+    
+    // 批次更新股價
+    const results = await updateMultiplePrices(stockCodes);
+    
+    // 更新計算列表中的股價
+    let successCount = 0;
+    calculationList.forEach((calc, index) => {
+      const result = results.find(r => r.stockCode === calc.stockCode);
+      if (result && result.success && result.price) {
+        const item = marginData.find(m => m.contractCode === calc.contractCode);
+        if (item) {
+          calculationList[index] = calculateMargin(item, result.price, calc.lots);
+          successCount++;
+        }
+      }
+    });
+    
+    // 更新 UI
+    renderCalculationTable();
+    updateSummary();
+    updateRiskMetrics();
+    
+    // 保存到 localStorage
+    saveCalculationList(calculationList);
+    
+    // 設置冷卻時間
+    setPriceUpdateTime();
+    startCooldownTimers();
+    
+    // 顯示結果
+    if (successCount > 0) {
+      updateStatus('success', `股價更新完成：${successCount}/${stockCodes.length} 成功`);
+      toast.show(`✓ 成功更新 ${successCount} 個股票價格`, 'success', 3000);
+    } else {
+      updateStatus('error', '股價更新失敗');
+      toast.show('無法更新股價，請稍後再試', 'error', 5000);
+    }
+    
+  } catch (error) {
+    console.error('[App] ✗ 股價更新失敗:', error);
+    updateStatus('error', '股價更新失敗');
+    toast.show('股價更新失敗，請檢查網路連線', 'error', 5000);
+  } finally {
+    // 恢復按鈕狀態
+    if (updateBtn) {
+      updateBtn.disabled = false;
+      updateBtn.textContent = '💰 更新股價';
+    }
+  }
+}
+
+/**
+ * 啟動冷卻倒計時
+ */
+function startCooldownTimers() {
+  // 清除現有計時器
+  if (cooldownTimers.margin) clearInterval(cooldownTimers.margin);
+  if (cooldownTimers.price) clearInterval(cooldownTimers.price);
+  
+  // 更新保證金按鈕冷卻
+  updateMarginButtonCooldown();
+  cooldownTimers.margin = window.setInterval(updateMarginButtonCooldown, 1000);
+  
+  // 更新股價按鈕冷卻
+  updatePriceButtonCooldown();
+  cooldownTimers.price = window.setInterval(updatePriceButtonCooldown, 1000);
+}
+
+/**
+ * 更新保證金按鈕冷卻顯示
+ */
+function updateMarginButtonCooldown() {
+  const cooldownCheck = checkMarginUpdateCooldown();
+  const updateBtn = document.getElementById('update-data-btn') as HTMLButtonElement;
+  
+  if (!updateBtn) return;
+  
+  if (cooldownCheck.canUpdate) {
+    updateBtn.textContent = '🔄 更新保證金';
+    updateBtn.disabled = false;
+    updateBtn.title = '點擊更新保證金資料';
+  } else {
+    const timeLeft = formatRemainingTime(cooldownCheck.remaining);
+    updateBtn.textContent = `⏳ ${timeLeft}`;
+    updateBtn.disabled = true;
+    updateBtn.title = cooldownCheck.message || '冷卻中';
+  }
+}
+
+/**
+ * 更新股價按鈕冷卻顯示
+ */
+function updatePriceButtonCooldown() {
+  const cooldownCheck = checkPriceUpdateCooldown();
+  const updateBtn = document.getElementById('update-price-btn') as HTMLButtonElement;
+  
+  if (!updateBtn) return;
+  
+  if (cooldownCheck.canUpdate) {
+    updateBtn.textContent = '💰 更新股價';
+    updateBtn.disabled = false;
+    updateBtn.title = '點擊更新股價資料';
+  } else {
+    const timeLeft = formatRemainingTime(cooldownCheck.remaining);
+    updateBtn.textContent = `⏳ ${timeLeft}`;
+    updateBtn.disabled = true;
+    updateBtn.title = cooldownCheck.message || '冷卻中';
+  }
+}
+
 // 暴露給全域使用
 (window as any).updateLots = updateLots;
 (window as any).updatePrice = updatePrice;
+(window as any).updateStockPrices = updateStockPrices;
