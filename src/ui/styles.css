@@ -36,7 +36,7 @@
 }
 
 html {
-  font-size: 15px;
+  font-size: 18px;
 }
 
 body {
@@ -106,6 +106,39 @@ body {
   align-items: center;
   gap: 16px;
   flex-wrap: wrap;
+}
+
+.btn-update {
+  background: var(--gradient-blue);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: opacity var(--transition), transform var(--transition), box-shadow var(--transition);
+  box-shadow: 0 0 12px rgba(88, 166, 255, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-update:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(88, 166, 255, 0.3);
+}
+
+.btn-update:active {
+  transform: translateY(0);
+}
+
+.btn-update:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .status-badge {

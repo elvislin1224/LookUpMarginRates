@@ -29,38 +29,72 @@ export async function initApp() {
   try {
     console.log('[App] 開始初始化應用程式...');
     
-    // 顯示載入狀態
-    updateStatus('loading', '正在載入保證金資料...');
-    
-    // 嘗試載入本地資料
-    const localData = await loadLocalData();
-    
-    if (localData && isDataFresh(localData.last_updated)) {
-      // 使用本地資料
-      marginData = normalizeMarginData(localData.futures);
-      updateStatus('success', `資料已載入（${localData.data_date}）- ${marginData.length} 筆期貨`);
-      console.log(`[App] ✓ 使用本地資料：${marginData.length} 筆`);
-    } else {
-      // 本地資料不存在或已過期
-      updateStatus('warning', '本地資料不可用，請執行 npm run fetch-data');
-      console.warn('[App] ⚠ 本地資料不可用');
-      toast.show('請先執行 npm run fetch-data 下載保證金資料', 'info', 5000);
-    }
-    
-    // 啟用搜尋框
-    const searchInput = document.getElementById('search-input') as HTMLInputElement;
-    if (searchInput && marginData.length > 0) {
-      searchInput.placeholder = '搜尋股票代碼或名稱...';
-      console.log('[App] ✓ 搜尋功能已啟用');
-    }
+    // 顯示初始狀態（不自動載入資料）
+    updateStatus('warning', '尚未載入資料，請點擊「更新保證金」按鈕');
     
     // 初始化計算表
     initCalculationTable();
+    
+    console.log('[App] ✓ 應用程式初始化完成，等待手動更新資料');
     
   } catch (error) {
     console.error('[App] ✗ 初始化失敗:', error);
     updateStatus('error', '初始化失敗');
     toast.show('應用程式初始化失敗，請重新整理頁面', 'error', 5000);
+  }
+}
+
+/**
+ * 手動更新保證金資料
+ */
+export async function updateMarginData() {
+  const updateBtn = document.getElementById('update-data-btn') as HTMLButtonElement;
+  
+  try {
+    console.log('[App] 開始手動更新保證金資料...');
+    
+    // 禁用按鈕，防止重複點擊
+    if (updateBtn) {
+      updateBtn.disabled = true;
+      updateBtn.textContent = '⏳ 更新中...';
+    }
+    
+    // 顯示載入狀態
+    updateStatus('loading', '正在載入保證金資料...');
+    
+    // 載入本地資料
+    const localData = await loadLocalData();
+    
+    if (localData && localData.futures && localData.futures.length > 0) {
+      // 使用本地資料
+      marginData = normalizeMarginData(localData.futures);
+      updateStatus('success', `資料已載入（${localData.data_date}）- ${marginData.length} 筆期貨`);
+      console.log(`[App] ✓ 更新成功：${marginData.length} 筆`);
+      toast.show(`✓ 成功載入 ${marginData.length} 筆期貨資料`, 'success', 3000);
+      
+      // 啟用搜尋框
+      const searchInput = document.getElementById('search-input') as HTMLInputElement;
+      if (searchInput) {
+        searchInput.placeholder = '搜尋股票代碼或名稱...';
+        searchInput.disabled = false;
+      }
+    } else {
+      // 資料載入失敗
+      updateStatus('error', '資料載入失敗');
+      console.error('[App] ✗ 資料載入失敗');
+      toast.show('資料載入失敗，請稍後再試', 'error', 5000);
+    }
+    
+  } catch (error) {
+    console.error('[App] ✗ 更新失敗:', error);
+    updateStatus('error', '更新失敗');
+    toast.show('資料更新失敗，請檢查網路連線', 'error', 5000);
+  } finally {
+    // 恢復按鈕狀態
+    if (updateBtn) {
+      updateBtn.disabled = false;
+      updateBtn.textContent = '🔄 更新保證金';
+    }
   }
 }
 
