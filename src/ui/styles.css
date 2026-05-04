@@ -881,6 +881,62 @@ table.calc-table {
 }
 
 /* ============================
+   Delete & Clear Buttons
+============================= */
+.btn-delete {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  line-height: 1;
+}
+
+.btn-delete:hover {
+  background: rgba(248, 81, 73, 0.1);
+  color: var(--accent-red);
+  transform: scale(1.1);
+}
+
+.btn-delete:active {
+  transform: scale(0.95);
+}
+
+.btn-clear {
+  background: rgba(248, 81, 73, 0.1);
+  color: var(--accent-red);
+  border: 1px solid rgba(248, 81, 73, 0.3);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-clear:hover {
+  background: var(--accent-red);
+  color: white;
+  border-color: var(--accent-red);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(248, 81, 73, 0.3);
+}
+
+.btn-clear:active {
+  transform: translateY(0);
+}
+
+.btn-clear:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ============================
    Responsive Design
 ============================= */
 @media (max-width: 768px) {

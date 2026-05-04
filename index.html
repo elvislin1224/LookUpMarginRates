@@ -103,8 +103,11 @@
       <!-- Right: Calculation Table -->
       <div class="calc-section">
         <div class="card">
-          <div class="card-header">
-            🧮 保證金試算表（最多 10 檔）
+          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>🧮 保證金試算表（最多 10 檔）</span>
+            <button id="clear-list-btn" class="btn-clear" title="清除清單所有內容" onclick="window.clearCalculationList()">
+              🗑️ 清除清單
+            </button>
           </div>
           <div class="card-body">
             <div class="calc-table-wrap">
@@ -120,6 +123,7 @@
                     <th>結算保證金</th>
                     <th>維持保證金</th>
                     <th>原始保證金</th>
+                    <th style="width: 60px;">操作</th>
                   </tr>
                 </thead>
                 <tbody>

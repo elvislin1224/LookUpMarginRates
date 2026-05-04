@@ -76,6 +76,8 @@ export async function initApp() {
 
 /**
  * 手動更新保證金資料
+ * 注意：資料由 GitHub Actions 每天自動更新
+ * 此函數用於手動重新載入最新資料
  */
 export async function updateMarginData() {
   const updateBtn = document.getElementById('update-data-btn') as HTMLButtonElement;
@@ -88,7 +90,7 @@ export async function updateMarginData() {
   }
   
   try {
-    console.log('[App] 開始手動更新保證金資料...');
+    console.log('[App] 開始重新載入保證金資料...');
     
     // 禁用按鈕，防止重複點擊
     if (updateBtn) {
@@ -394,7 +396,7 @@ function renderCalculationTable() {
       return `
         <tr class="empty-row" data-index="${index}">
           <td>${index + 1}</td>
-          <td colspan="8" style="text-align: center; color: var(--text-tertiary); font-size: 0.85rem;">
+          <td colspan="9" style="text-align: center; color: var(--text-tertiary); font-size: 0.85rem;">
             尚未加入合約
           </td>
         </tr>
@@ -418,6 +420,11 @@ function renderCalculationTable() {
         <td>$${formatNumber(calc.clearingMargin)}</td>
         <td>$${formatNumber(calc.maintenanceMargin)}</td>
         <td>$${formatNumber(calc.initialMargin)}</td>
+        <td>
+          <button class="btn-delete" onclick="window.deleteRow(${index})" title="刪除此列">
+            ❌
+          </button>
+        </td>
       </tr>
     `;
   }).join('');
@@ -757,7 +764,63 @@ function updatePriceButtonCooldown() {
   }
 }
 
+/**
+ * 刪除指定列的資料
+ */
+function deleteRow(index: number) {
+  if (index < 0 || index >= calculationList.length) return;
+  
+  const item = calculationList[index];
+  console.log(`[Delete] 刪除第 ${index + 1} 列：${item.contractName}`);
+  
+  // 從列表中移除
+  calculationList.splice(index, 1);
+  
+  // 重新渲染
+  renderCalculationTable();
+  updateSummary();
+  updateRiskMetrics();
+  
+  // 保存到 localStorage
+  saveCalculationList(calculationList);
+  
+  // 顯示提示
+  toast.show(`已刪除：${item.contractName}`, 'success', 2000);
+}
+
+/**
+ * 清除清單所有內容
+ */
+function clearCalculationList() {
+  if (calculationList.length === 0) {
+    toast.show('清單已為空', 'info', 2000);
+    return;
+  }
+  
+  // 確認對話框
+  const confirmed = confirm(`確定要清除清單中的 ${calculationList.length} 筆資料嗎？`);
+  if (!confirmed) return;
+  
+  console.log('[Clear] 清除所有計算資料');
+  
+  // 清空列表
+  calculationList = [];
+  
+  // 重新渲染
+  renderCalculationTable();
+  updateSummary();
+  updateRiskMetrics();
+  
+  // 保存到 localStorage
+  saveCalculationList(calculationList);
+  
+  // 顯示提示
+  toast.show('已清除清單所有內容', 'success', 2000);
+}
+
 // 暴露給全域使用
 (window as any).updateLots = updateLots;
 (window as any).updatePrice = updatePrice;
 (window as any).updateStockPrices = updateStockPrices;
+(window as any).deleteRow = deleteRow;
+(window as any).clearCalculationList = clearCalculationList;

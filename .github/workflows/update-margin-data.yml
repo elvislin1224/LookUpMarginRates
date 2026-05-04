@@ -1,0 +1,64 @@
+name: Update Margin Data Daily
+
+on:
+  # 定時執行：每天 UTC 0:00（台灣時間 08:00）
+  schedule:
+    - cron: '0 0 * * *'
+  
+  # 允許手動觸發
+  workflow_dispatch:
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 步驟 1：檢出代碼
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      # 步驟 2：設定 Python 環境
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      
+      # 步驟 3：安裝依賴
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4 lxml
+      
+      # 步驟 4：執行爬蟲腳本
+      - name: Run fetch script
+        run: python scripts/fetch_data.py
+      
+      # 步驟 5：檢查是否有變更
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if git diff --quiet data/margin_data.json; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+      
+      # 步驟 6：提交並推送變更
+      - name: Commit and push changes
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action Bot"
+          git add data/margin_data.json
+          git commit -m "chore: update margin data - $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+          git push
+      
+      # 步驟 7：記錄結果
+      - name: Log result
+        if: always()
+        run: |
+          echo "✅ Margin data update workflow completed"
+          echo "Status: ${{ job.status }}"
+          echo "Has changes: ${{ steps.check_changes.outputs.has_changes }}"
