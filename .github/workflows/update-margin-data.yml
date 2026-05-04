@@ -53,9 +53,7 @@ jobs:
           git config --local user.name "GitHub Action Bot"
           git add data/margin_data.json
           git commit -m "chore: update margin data - $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
-          git push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          git push https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
       
       # 步驟 7：記錄結果
       - name: Log result
