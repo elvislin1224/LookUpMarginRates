@@ -54,6 +54,8 @@ jobs:
           git add data/margin_data.json
           git commit -m "chore: update margin data - $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
           git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
       # 步驟 7：記錄結果
       - name: Log result
