@@ -16,12 +16,17 @@ from urllib.error import URLError, HTTPError
 import time
 
 # 常數定義
-TAIFEX_BASE_URL = "https://www.taifex.com.tw/cht/3/futuresDataDown"
-CSV_URLS = {
-    "stock_futures_list": "https://www.taifex.com.tw/file/taifex/Dailydownload/DailydownloadCSV/StockFuturesList.csv",
-    "stock_margin": "https://www.taifex.com.tw/file/taifex/Dailydownload/DailydownloadCSV/StockFuturesMargin.csv",
-    "etf_margin": "https://www.taifex.com.tw/file/taifex/Dailydownload/DailydownloadCSV/ETFFuturesMargin.csv",
-}
+TAIFEX_BASE_URL = "https://www.taifex.com.tw/cht/5/stockMarginingDown"
+# 新的 TAIFEX 資料來源 (2026-05 更新)
+# 注意：TAIFEX 已將所有資料合併到單一 CSV 檔案
+CSV_URL = "https://www.taifex.com.tw/cht/5/stockMarginingDown"
+
+# 舊的 URLs (已棄用 - 2026-05-05)
+# CSV_URLS = {
+#     "stock_futures_list": "https://www.taifex.com.tw/file/taifex/Dailydownload/DailydownloadCSV/StockFuturesList.csv",
+#     "stock_margin": "https://www.taifex.com.tw/file/taifex/Dailydownload/DailydownloadCSV/StockFuturesMargin.csv",
+#     "etf_margin": "https://www.taifex.com.tw/file/taifex/Dailydownload/DailydownloadCSV/ETFFuturesMargin.csv",
+# }
 
 # 檔案路徑
 SCRIPT_DIR = Path(__file__).parent
@@ -128,135 +133,150 @@ def detect_contract_size(contract_name):
 
 def build_margin_data():
     """
-    建立完整的保證金資料結構
+    建立完整的保證金資料結構（2026-05 新版）
+    從單一 CSV 檔案讀取所有資料
     
     Returns:
         dict: 完整的資料字典
     """
     log("=" * 60)
-    log("開始下載期交所資料")
+    log("開始下載期交所資料（新版 API）")
     log("=" * 60)
     
-    # 下載三個 CSV 檔案
-    log("\n[步驟 1/4] 下載股票期貨清單...")
-    stock_futures_list_csv = download_csv(CSV_URLS["stock_futures_list"])
+    # 下載單一 CSV 檔案
+    log("\n[步驟 1/3] 下載保證金資料...")
+    csv_content = download_csv(CSV_URL)
     
-    log("\n[步驟 2/4] 下載股票期貨保證金...")
-    stock_margin_csv = download_csv(CSV_URLS["stock_margin"])
+    # 解析 CSV（需要手動處理分段）
+    log("\n[步驟 2/3] 解析 CSV 資料...")
+    lines = csv_content.strip().split('\n')
     
-    log("\n[步驟 3/4] 下載 ETF 期貨保證金...")
-    etf_margin_csv = download_csv(CSV_URLS["etf_margin"])
-    
-    # 解析 CSV
-    log("\n[步驟 4/4] 解析 CSV 資料...")
-    stock_futures_list = parse_csv_content(stock_futures_list_csv)
-    stock_margin_data = parse_csv_content(stock_margin_csv)
-    etf_margin_data = parse_csv_content(etf_margin_csv)
-    
-    log(f"✓ 股票期貨清單：{len(stock_futures_list)} 筆")
-    log(f"✓ 股票期貨保證金：{len(stock_margin_data)} 筆")
-    log(f"✓ ETF 期貨保證金：{len(etf_margin_data)} 筆")
-    
-    # 建立保證金映射表
-    margin_map = {}
-    data_date = ""
-    
-    # 處理股票期貨保證金（比例制）
-    for item in stock_margin_data:
-        try:
-            stock_code = item.get('標的證券代號', '').strip()
-            if not stock_code:
-                continue
-            
-            contract_name = item.get('契約名稱', '').strip()
-            
-            margin_map[stock_code] = {
-                'type': 'stock',
-                'contractCode': item.get('契約代號', '').strip(),
-                'contractName': contract_name,
-                'stockCode': stock_code,
-                'groupLevel': item.get('保證金級距', '').strip(),
-                'clearingRate': float(item.get('結算保證金適用比例', '0').strip() or '0'),
-                'maintenanceRate': float(item.get('維持保證金適用比例', '0').strip() or '0'),
-                'initialRate': float(item.get('原始保證金適用比例', '0').strip() or '0'),
-                'lotSize': detect_contract_size(contract_name),
-                'date': item.get('資料日期', '').strip()
-            }
-            
-            # 記錄資料日期
-            if not data_date and margin_map[stock_code]['date']:
-                data_date = margin_map[stock_code]['date']
-                
-        except (ValueError, KeyError) as e:
-            log(f"✗ 解析股票期貨資料錯誤: {e}", "WARN")
-            continue
-    
-    # 處理 ETF 期貨保證金（固定金額制）
-    for item in etf_margin_data:
-        try:
-            stock_code = item.get('標的證券代號', '').strip()
-            if not stock_code:
-                continue
-            
-            contract_name = item.get('契約名稱', '').strip()
-            
-            # 移除千分位符號並轉換為數值
-            clearing_str = item.get('結算保證金', '0').strip().replace(',', '')
-            maintenance_str = item.get('維持保證金', '0').strip().replace(',', '')
-            initial_str = item.get('原始保證金', '0').strip().replace(',', '')
-            
-            margin_map[stock_code] = {
-                'type': 'etf',
-                'contractCode': item.get('契約代號', '').strip(),
-                'contractName': contract_name,
-                'stockCode': stock_code,
-                'groupLevel': '',
-                'clearingFixed': float(clearing_str or '0'),
-                'maintenanceFixed': float(maintenance_str or '0'),
-                'initialFixed': float(initial_str or '0'),
-                'lotSize': 1000,  # ETF 期貨每口 1000 單位
-                'date': item.get('資料日期', '').strip()
-            }
-            
-            if not data_date and margin_map[stock_code]['date']:
-                data_date = margin_map[stock_code]['date']
-                
-        except (ValueError, KeyError) as e:
-            log(f"✗ 解析 ETF 期貨資料錯誤: {e}", "WARN")
-            continue
-    
-    # 建立完整的期貨清單（包含保證金資訊）
     futures_list = []
+    data_date = ""
+    current_section = None
+    csv_header = None
+    stock_futures_count = 0
+    etf_futures_count = 0
     
-    for item in stock_futures_list:
-        try:
-            stock_code = item.get('標的證券代號', '').strip()
-            contract_code = item.get('期貨契約代號', '').strip()
-            
-            if not stock_code and not contract_code:
-                continue
-            
-            # 從保證金資料中匹配
-            margin_info = margin_map.get(stock_code) or margin_map.get(contract_code)
-            
-            future_item = {
-                'contract': contract_code,
-                'stockCode': stock_code,
-                'stockName': item.get('標的證券簡稱', '').strip(),
-                'underlying': item.get('標的證券名稱', '').strip(),
-                'securityType': item.get('標的證券種類', '').strip(),
-                '_hasMargin': bool(margin_info)
-            }
-            
-            # 合併保證金資訊
-            if margin_info:
-                future_item.update(margin_info)
-            
-            futures_list.append(future_item)
-            
-        except Exception as e:
-            log(f"✗ 建立期貨清單錯誤: {e}", "WARN")
+    for line in lines:
+        # 跳過空行
+        if not line.strip():
             continue
+        
+        # 識別區塊標題
+        if line.startswith('一、股票期貨契約保證金一覽表'):
+            log("✓ 找到股票期貨保證金區塊")
+            continue
+        elif line.startswith('(一) 標的證券為股票之股票期貨契約'):
+            current_section = 'stock_futures'
+            csv_header = None
+            continue
+        elif line.startswith('(二) 標的證券為受益憑證之股票期貨契約'):
+            current_section = 'etf_futures'
+            csv_header = None
+            continue
+        elif line.startswith('二、股票選擇權契約保證金一覽表'):
+            log("✓ 跳過選擇權區塊")
+            current_section = None
+            continue
+        elif line.startswith('更新日期:'):
+            # 提取資料日期
+            date_str = line.split(':')[1].strip()
+            if not data_date:
+                data_date = date_str.replace('/', '')
+            continue
+        elif line.startswith('序號,'):
+            # CSV 標題行
+            csv_header = line.split(',')
+            continue
+        
+        # 處理資料行
+        if current_section and csv_header:
+            try:
+                fields = line.split(',')
+                if len(fields) < 5:
+                    continue
+                
+                # 建立字典
+                row = {csv_header[i]: fields[i].strip() if i < len(fields) else '' 
+                       for i in range(len(csv_header))}
+                
+                if current_section == 'stock_futures':
+                    # 處理股票期貨（比例制）
+                    stock_code = row.get('股票期貨標的證券代號', '').strip()
+                    if not stock_code:
+                        continue
+                    
+                    contract_name = row.get('股票期貨中文簡稱', '').strip()
+                    
+                    # 解析保證金比例（移除 % 符號）
+                    def parse_rate(value):
+                        try:
+                            return float(value.replace('%', '').strip() or '0')
+                        except:
+                            return 0.0
+                    
+                    future_item = {
+                        'type': 'stock',
+                        'contract': row.get('股票期貨英文代碼', '').strip(),
+                        'contractCode': row.get('股票期貨英文代碼', '').strip(),
+                        'contractName': contract_name,
+                        'stockCode': stock_code,
+                        'stockName': contract_name,
+                        'underlying': row.get('股票期貨標的證券', '').strip().replace('"', ''),
+                        'groupLevel': row.get('保證金所屬級距', '').strip(),
+                        'clearingRate': parse_rate(row.get('結算保證金適用比例', '0')),
+                        'maintenanceRate': parse_rate(row.get('維持保證金適用比例', '0')),
+                        'initialRate': parse_rate(row.get('原始保證金適用比例', '0')),
+                        'lotSize': detect_contract_size(contract_name),
+                        'date': data_date,
+                        '_hasMargin': True
+                    }
+                    
+                    futures_list.append(future_item)
+                    stock_futures_count += 1
+                    
+                elif current_section == 'etf_futures':
+                    # 處理 ETF 期貨（固定金額制）
+                    stock_code = row.get('股票期貨標的證券代號', '').strip()
+                    if not stock_code:
+                        continue
+                    
+                    contract_name = row.get('股票期貨中文簡稱', '').strip()
+                    
+                    # 解析保證金金額（移除千分位）
+                    def parse_amount(value):
+                        try:
+                            return float(value.replace(',', '').strip() or '0')
+                        except:
+                            return 0.0
+                    
+                    future_item = {
+                        'type': 'etf',
+                        'contract': row.get('股票期貨英文代碼', '').strip(),
+                        'contractCode': row.get('股票期貨英文代碼', '').strip(),
+                        'contractName': contract_name,
+                        'stockCode': stock_code,
+                        'stockName': contract_name,
+                        'underlying': row.get('股票期貨標的證券', '').strip(),
+                        'groupLevel': '',
+                        'clearingFixed': parse_amount(row.get('結算保證金', '0')),
+                        'maintenanceFixed': parse_amount(row.get('維持保證金', '0')),
+                        'initialFixed': parse_amount(row.get('原始保證金', '0')),
+                        'lotSize': 1000,  # ETF 期貨每口 1000 單位
+                        'date': data_date,
+                        '_hasMargin': True
+                    }
+                    
+                    futures_list.append(future_item)
+                    etf_futures_count += 1
+                    
+            except Exception as e:
+                log(f"✗ 解析資料行錯誤: {e}", "WARN")
+                continue
+    
+    log(f"✓ 股票期貨：{stock_futures_count} 筆")
+    log(f"✓ ETF 期貨：{etf_futures_count} 筆")
     
     # 組裝最終輸出
     output_data = {
@@ -266,7 +286,7 @@ def build_margin_data():
         'futures': futures_list
     }
     
-    log(f"\n✓ 資料處理完成：共 {len(futures_list)} 筆期貨資料")
+    log(f"\n[步驟 3/3] 資料處理完成：共 {len(futures_list)} 筆期貨資料")
     log(f"✓ 資料日期：{data_date}")
     
     return output_data
