@@ -12,6 +12,56 @@ import { identifyContractSize } from './contractSize';
  */
 export async function loadLocalData(): Promise<MarginDataResponse | null> {
   try {
+    // 嘗試兩種路徑：開發環境和生產環境
+    const paths = [
+      '/margin_data.json',                    // Vite dev server (publicDir: 'data')
+      '/LookUpMarginRates/margin_data.json',  // GitHub Pages
+      'data/margin_data.json'                 // 直接路徑
+    ];
+    
+    let lastError: Error | null = null;
+    
+    for (const path of paths) {
+      try {
+        console.log(`[DataLoader] 嘗試載入本地資料: ${path}`);
+        const response = await fetch(path);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data: MarginDataResponse = await response.json();
+        
+        // 驗證資料結構
+        if (!data.futures || !Array.isArray(data.futures)) {
+          throw new Error('資料格式錯誤：缺少 futures 陣列');
+        }
+        
+        console.log(`[DataLoader] ✓ 本地資料載入成功：${data.total_count} 筆`);
+        console.log(`[DataLoader] 資料日期：${data.data_date}`);
+        console.log(`[DataLoader] 最後更新：${data.last_updated}`);
+        console.log(`[DataLoader] 使用路徑：${path}`);
+        
+        return data;
+      } catch (error) {
+        console.warn(`[DataLoader] 路徑 ${path} 失敗:`, error);
+        lastError = error instanceof Error ? error : new Error(String(error));
+        continue;
+      }
+    }
+    
+    throw lastError || new Error('所有路徑都無法載入資料');
+  } catch (error) {
+    console.error('[DataLoader] ✗ 本地資料載入失敗:', error);
+    return null;
+  }
+}
+
+/**
+ * 舊的單一路徑載入（備份）
+ */
+async function loadLocalDataSinglePath(): Promise<MarginDataResponse | null> {
+  try {
     console.log('[DataLoader] 嘗試載入本地資料: /LookUpMarginRates/margin_data.json');
     const response = await fetch('/LookUpMarginRates/margin_data.json');
     
