@@ -11,9 +11,10 @@ export function formatNumber(num: number): string {
 
 /**
  * 格式化百分比
+ * 注意：輸入值已經是百分比格式（例如 10.0 表示 10%）
  */
 export function formatPercentage(rate: number): string {
-  return `${(rate * 100).toFixed(2)}%`;
+  return `${rate.toFixed(2)}%`;
 }
 
 /**
