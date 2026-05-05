@@ -205,21 +205,32 @@ export async function updateSinglePrice(
 }
 
 /**
- * 批次更新多個股票價格
+ * 批次更新多個股票價格（並行處理，加快速度）
  */
 export async function updateMultiplePrices(
-  stockCodes: string[]
+  stockCodes: string[],
+  batchSize = 3  // 每批並行處理 3 個股票
 ): Promise<PriceUpdateResult[]> {
   console.log(`[PriceUpdater] 開始批次更新 ${stockCodes.length} 個股票價格...`);
+  console.log(`[PriceUpdater] 使用並行處理（每批 ${batchSize} 個）以加快速度`);
   
   const results: PriceUpdateResult[] = [];
   
-  for (const code of stockCodes) {
-    // 隨機延遲（避免被封鎖）
-    await randomDelay(800, 1800);
+  // 將股票代碼分成多個批次
+  for (let i = 0; i < stockCodes.length; i += batchSize) {
+    const batch = stockCodes.slice(i, i + batchSize);
+    console.log(`[PriceUpdater] 處理第 ${Math.floor(i / batchSize) + 1} 批：${batch.join(', ')}`);
     
-    const result = await updateSinglePrice(code);
-    results.push(result);
+    // 並行處理當前批次
+    const batchPromises = batch.map(code => updateSinglePrice(code));
+    const batchResults = await Promise.all(batchPromises);
+    
+    results.push(...batchResults);
+    
+    // 批次之間稍微延遲（避免被封鎖）
+    if (i + batchSize < stockCodes.length) {
+      await randomDelay(500, 1000);
+    }
   }
   
   const successCount = results.filter(r => r.success).length;
