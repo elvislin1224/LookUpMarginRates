@@ -89,14 +89,14 @@ export async function updateMarginData() {
     return;
   }
   
+  // 立即禁用按鈕，防止重複點擊
+  if (updateBtn) {
+    updateBtn.disabled = true;
+    updateBtn.textContent = '⏳ 更新中...';
+  }
+  
   try {
     console.log('[App] 開始重新載入保證金資料...');
-    
-    // 禁用按鈕，防止重複點擊
-    if (updateBtn) {
-      updateBtn.disabled = true;
-      updateBtn.textContent = '⏳ 更新中...';
-    }
     
     // 顯示載入狀態
     updateStatus('loading', '正在載入保證金資料...');
@@ -110,10 +110,6 @@ export async function updateMarginData() {
       updateStatus('success', `資料已載入（${localData.data_date}）- ${marginData.length} 筆期貨`);
       console.log(`[App] ✓ 更新成功：${marginData.length} 筆`);
       toast.show(`✓ 成功載入 ${marginData.length} 筆期貨資料`, 'success', 3000);
-      
-      // 設置冷卻時間
-      setMarginUpdateTime();
-      startCooldownTimers();
       
       // 啟用搜尋框
       const searchInput = document.getElementById('search-input') as HTMLInputElement;
@@ -133,6 +129,10 @@ export async function updateMarginData() {
     updateStatus('error', '更新失敗');
     toast.show('資料更新失敗，請檢查網路連線', 'error', 5000);
   } finally {
+    // 更新完成後才開始冷卻倒數
+    setMarginUpdateTime();
+    startCooldownTimers();
+    
     // 恢復按鈕狀態
     if (updateBtn) {
       updateBtn.disabled = false;
@@ -640,14 +640,14 @@ export async function updateStockPrices() {
     return;
   }
   
+  // 立即禁用按鈕
+  if (updateBtn) {
+    updateBtn.disabled = true;
+    updateBtn.textContent = '⏳ 更新中...';
+  }
+  
   try {
     console.log('[App] 開始更新股價...');
-    
-    // 禁用按鈕
-    if (updateBtn) {
-      updateBtn.disabled = true;
-      updateBtn.textContent = '⏳ 更新中...';
-    }
     
     // 顯示載入狀態
     updateStatus('loading', '正在更新股價...');
@@ -679,10 +679,6 @@ export async function updateStockPrices() {
     // 保存到 localStorage
     saveCalculationList(calculationList);
     
-    // 設置冷卻時間
-    setPriceUpdateTime();
-    startCooldownTimers();
-    
     // 顯示結果
     if (successCount > 0) {
       updateStatus('success', `股價更新完成：${successCount}/${stockCodes.length} 成功`);
@@ -697,6 +693,10 @@ export async function updateStockPrices() {
     updateStatus('error', '股價更新失敗');
     toast.show('股價更新失敗，請檢查網路連線', 'error', 5000);
   } finally {
+    // 更新完成後才開始冷卻倒數
+    setPriceUpdateTime();
+    startCooldownTimers();
+    
     // 恢復按鈕狀態
     if (updateBtn) {
       updateBtn.disabled = false;
