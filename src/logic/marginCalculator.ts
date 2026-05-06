@@ -29,9 +29,10 @@ export function calculateMargin(
   if (item.type === 'stock') {
     // 股票期貨：比例制
     const baseAmount = lots * item.lotSize * price;
-    clearing = baseAmount * (item.clearingRate ?? 0);
-    maintenance = baseAmount * (item.maintenanceRate ?? 0);
-    initial = baseAmount * (item.initialRate ?? 0);
+    // 注意：保證金比例是百分比形式（例如 30.38 代表 30.38%），需要除以 100
+    clearing = baseAmount * (item.clearingRate ?? 0) / 100;
+    maintenance = baseAmount * (item.maintenanceRate ?? 0) / 100;
+    initial = baseAmount * (item.initialRate ?? 0) / 100;
   } else if (item.type === 'etf') {
     // ETF 期貨：固定金額制
     clearing = lots * (item.clearingFixed ?? 0);
