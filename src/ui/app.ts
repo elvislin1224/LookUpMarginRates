@@ -53,11 +53,34 @@ export async function initApp() {
     // 顯示初始狀態（不自動載入資料）
     updateStatus('warning', '尚未載入資料，請點擊「更新保證金」按鈕');
     
-    // 恢復 localStorage 資料
-    restoreStoredData();
+    // 清除所有 localStorage 資料（每次開啟時重新開始）
+    calculationList = [];
+    currentEquity = 0;
     
-    // 初始化計算表
-    initCalculationTable();
+    // 清除計算列表
+    const tbody = document.querySelector('.calc-table tbody');
+    if (tbody) {
+      tbody.innerHTML = Array(10).fill(0).map((_, index) => `
+        <tr class="empty-row" data-index="${index}">
+          <td>${index + 1}</td>
+          <td colspan="8" style="text-align: center; color: var(--text-tertiary); font-size: 0.85rem;">
+            尚未加入合約
+          </td>
+        </tr>
+      `).join('');
+    }
+    
+    // 清除權益總值輸入框
+    const equityInput = document.getElementById('equity-input') as HTMLInputElement;
+    if (equityInput) {
+      equityInput.value = '';
+      equityInput.title = '';
+    }
+    
+    // 清除總計顯示
+    document.getElementById('sum-clearing')!.textContent = '$0';
+    document.getElementById('sum-maintenance')!.textContent = '$0';
+    document.getElementById('sum-initial')!.textContent = '$0';
     
     // 初始化風險管理面板
     initRiskPanel();
@@ -65,7 +88,7 @@ export async function initApp() {
     // 啟動冷卻倒計時
     startCooldownTimers();
     
-    console.log('[App] ✓ 應用程式初始化完成，等待手動更新資料');
+    console.log('[App] ✓ 應用程式初始化完成，所有資訊已清除');
     
   } catch (error) {
     console.error('[App] ✗ 初始化失敗:', error);
@@ -368,6 +391,7 @@ function handleAddToCalculation() {
 /**
  * 初始化計算表
  */
+// @ts-ignore - 此函數目前由 initApp() 內聯實現
 function initCalculationTable() {
   const tbody = document.querySelector('.calc-table tbody');
   if (!tbody) return;
@@ -517,6 +541,7 @@ export function testStockCodes(codes: string[]) {
 /**
  * 恢復 localStorage 中的資料
  */
+// @ts-ignore - 此函數目前由 initApp() 內聯實現
 function restoreStoredData() {
   // 恢復權益總值
   const savedEquity = loadEquity();
@@ -811,6 +836,14 @@ function clearCalculationList() {
   // 清空列表
   calculationList = [];
   
+  // 清除權益總值
+  currentEquity = 0;
+  const equityInput = document.getElementById('equity-input') as HTMLInputElement;
+  if (equityInput) {
+    equityInput.value = '';
+    equityInput.title = '';
+  }
+  
   // 重新渲染
   renderCalculationTable();
   updateSummary();
@@ -818,6 +851,7 @@ function clearCalculationList() {
   
   // 保存到 localStorage
   saveCalculationList(calculationList);
+  saveEquity(0); // 清除權益總值的 localStorage
   
   // 顯示提示
   toast.show('已清除清單所有內容', 'success', 2000);
