@@ -715,6 +715,7 @@ table.calc-table {
   position: relative;
   display: flex;
   align-items: center;
+  width: 100%;
 }
 
 .risk-currency {
@@ -723,11 +724,12 @@ table.calc-table {
   font-size: 1rem;
   color: var(--text-secondary);
   font-weight: 500;
+  pointer-events: none;
 }
 
 .risk-input {
   width: 100%;
-  padding: 12px 14px 12px 32px;
+  padding: 12px 14px 12px 36px;
   background: var(--bg-input);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -735,6 +737,7 @@ table.calc-table {
   font-size: 1rem;
   font-family: 'Inter', sans-serif;
   transition: var(--transition);
+  box-sizing: border-box;
 }
 
 .risk-input:hover {
