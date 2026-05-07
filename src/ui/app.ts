@@ -403,30 +403,30 @@ function renderCalculationTable() {
       `;
     }
     
-    return `
-      <tr data-index="${index}">
-        <td>${index + 1}</td>
-        <td>${calc.contractName}</td>
-        <td>${calc.stockCode}</td>
-        <td>${calc.lotSize}</td>
-        <td>
-          <input type="number" class="calc-input" value="${calc.lots}" min="1" 
-            onchange="window.updateLots(${index}, this.value)" />
-        </td>
-        <td>
-          <input type="number" class="calc-input" value="${calc.price}" min="0" step="0.1"
-            onchange="window.updatePrice(${index}, this.value)" />
-        </td>
-        <td>$${formatNumber(calc.clearingMargin)}</td>
-        <td>$${formatNumber(calc.maintenanceMargin)}</td>
-        <td>$${formatNumber(calc.initialMargin)}</td>
-        <td>
-          <button class="btn-delete" onclick="window.deleteRow(${index})" title="刪除此列">
-            ❌
-          </button>
-        </td>
-      </tr>
-    `;
+     return `
+       <tr data-index="${index}">
+         <td>${index + 1}</td>
+         <td>${calc.contractName}</td>
+         <td>${calc.stockCode}</td>
+         <td>${calc.lotSize}</td>
+         <td>
+           <input type="number" class="calc-input" value="${calc.lots}" min="1" 
+             onchange="window.updateLots(${index}, this.value)" title="${formatNumber(calc.lots)}" />
+         </td>
+         <td>
+           <input type="number" class="calc-input" value="${calc.price}" min="0" step="0.1"
+             onchange="window.updatePrice(${index}, this.value)" title="${formatNumber(Math.round(calc.price))}" />
+         </td>
+         <td>$${formatNumber(calc.clearingMargin)}</td>
+         <td>$${formatNumber(calc.maintenanceMargin)}</td>
+         <td>$${formatNumber(calc.initialMargin)}</td>
+         <td>
+           <button class="btn-delete" onclick="window.deleteRow(${index})" title="刪除此列">
+             ❌
+           </button>
+         </td>
+       </tr>
+     `;
   }).join('');
 }
 
@@ -567,6 +567,11 @@ function handleEquityInput(event: Event) {
   // 保存到 localStorage
   if (equity > 0) {
     saveEquity(equity);
+  }
+  
+  // 更新輸入框的 title 以顯示千位分隔符
+  if (equity > 0) {
+    input.title = `${formatNumber(Math.round(equity))}`;
   }
   
   // 更新風險指標

@@ -36,7 +36,7 @@
 }
 
 html {
-  font-size: 18px;
+  font-size: 20px;
 }
 
 body {
@@ -567,7 +567,7 @@ table.calc-table {
 .calc-table th {
   padding: 10px 12px;
   text-align: left;
-  font-size: 0.72rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-secondary);
   text-transform: uppercase;
@@ -580,7 +580,7 @@ table.calc-table {
   padding: 8px 12px;
   border-bottom: 1px solid rgba(48, 54, 61, 0.5);
   vertical-align: middle;
-  font-size: 0.9rem;
+  font-size: 1rem;
 }
 
 .calc-input {
