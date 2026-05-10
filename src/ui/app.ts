@@ -407,9 +407,9 @@ function initCalculationTable() {
   `).join('');
 }
 
-/**
- * 渲染計算表
- */
+ /**
+  * 渲染計算表
+  */
 function renderCalculationTable() {
   const tbody = document.querySelector('.calc-table tbody');
   if (!tbody) return;
@@ -420,14 +420,29 @@ function renderCalculationTable() {
       return `
         <tr class="empty-row" data-index="${index}">
           <td>${index + 1}</td>
-          <td colspan="9" style="text-align: center; color: var(--text-tertiary); font-size: 0.85rem;">
+          <td colspan="10" style="text-align: center; color: var(--text-tertiary); font-size: 0.85rem;">
             尚未加入合約
           </td>
         </tr>
       `;
     }
     
-     return `
+    // 取得原始項目以獲取保證金比例
+    const item = marginData.find(m => m.contractCode === calc.contractCode);
+    const totalMarketValue = calc.lotSize * calc.price;
+    
+    // 計算保證金比例顯示
+    let clearingLabel = '';
+    let maintenanceLabel = '';
+    let initialLabel = '';
+    
+    if (item && item.type === 'stock') {
+      clearingLabel = item.clearingRate ? `<div class="margin-ratio">${formatPercentage(item.clearingRate)}</div>` : '';
+      maintenanceLabel = item.maintenanceRate ? `<div class="margin-ratio">${formatPercentage(item.maintenanceRate)}</div>` : '';
+      initialLabel = item.initialRate ? `<div class="margin-ratio">${formatPercentage(item.initialRate)}</div>` : '';
+    }
+     
+    return `
        <tr data-index="${index}">
          <td>${index + 1}</td>
          <td>${calc.contractName}</td>
@@ -441,9 +456,19 @@ function renderCalculationTable() {
            <input type="number" class="calc-input" value="${calc.price}" min="0" step="0.1"
              onchange="window.updatePrice(${index}, this.value)" title="${formatNumber(Math.round(calc.price))}" />
          </td>
-         <td>$${formatNumber(calc.clearingMargin)}</td>
-         <td>$${formatNumber(calc.maintenanceMargin)}</td>
-         <td>$${formatNumber(calc.initialMargin)}</td>
+         <td style="text-align: right; padding-right: 12px;">${formatNumber(Math.round(totalMarketValue))}</td>
+         <td>
+           ${clearingLabel}
+           <div>$${formatNumber(calc.clearingMargin)}</div>
+         </td>
+         <td>
+           ${maintenanceLabel}
+           <div>$${formatNumber(calc.maintenanceMargin)}</div>
+         </td>
+         <td>
+           ${initialLabel}
+           <div>$${formatNumber(calc.initialMargin)}</div>
+         </td>
          <td>
            <button class="btn-delete" onclick="window.deleteRow(${index})" title="刪除此列">
              ❌
@@ -627,6 +652,12 @@ function updateRiskMetrics() {
   if (metricsDiv) metricsDiv.style.display = 'grid';
   if (placeholderDiv) placeholderDiv.style.display = 'none';
   
+  // 更新原始保證金總計
+  const initialMarginEl = document.getElementById('risk-initial-margin');
+  if (initialMarginEl) {
+    initialMarginEl.textContent = `$${formatNumber(totalInitialMargin)}`;
+  }
+  
   // 更新風險指標值
   const riskRatioEl = document.getElementById('risk-ratio');
   if (riskRatioEl) {
@@ -649,6 +680,27 @@ function updateRiskMetrics() {
     riskLevelBadge.textContent = getRiskLevelText(metrics.riskLevel);
     riskLevelBadge.className = `risk-level-badge risk-${metrics.riskLevel}`;
   }
+}
+
+/**
+ * 手動更新風險指標（用於「更新」按鈕）
+ */
+function updateRiskMetricsManually() {
+  if (calculationList.length === 0) {
+    toast.show('請先加入合約到試算表', 'error', 3000);
+    return;
+  }
+  
+  if (currentEquity <= 0) {
+    toast.show('請先輸入權益總值', 'error', 3000);
+    return;
+  }
+  
+  // 重新計算風險指標
+  updateRiskMetrics();
+  
+  // 顯示提示
+  toast.show('✓ 風險指標已更新', 'success', 2000);
 }
 
 /**
@@ -861,5 +913,6 @@ function clearCalculationList() {
 (window as any).updateLots = updateLots;
 (window as any).updatePrice = updatePrice;
 (window as any).updateStockPrices = updateStockPrices;
+(window as any).updateRiskMetricsManually = updateRiskMetricsManually;
 (window as any).deleteRow = deleteRow;
 (window as any).clearCalculationList = clearCalculationList;

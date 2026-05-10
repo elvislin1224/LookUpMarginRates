@@ -117,20 +117,21 @@
           <div class="card-body">
             <div class="calc-table-wrap">
               <table class="calc-table">
-                <thead>
-                  <tr>
-                    <th style="width: 40px;">#</th>
-                    <th style="width: 180px;">合約名稱</th>
-                    <th style="width: 80px;">代碼</th>
-                    <th style="width: 80px;">每口股數</th>
-                    <th style="width: 80px;">口數</th>
-                    <th style="width: 100px;">股價</th>
-                    <th>結算保證金</th>
-                    <th>維持保證金</th>
-                    <th>原始保證金</th>
-                    <th style="width: 60px;">操作</th>
-                  </tr>
-                </thead>
+                 <thead>
+                   <tr>
+                     <th style="width: 30px;">#</th>
+                     <th style="width: 150px;">合約名稱</th>
+                     <th style="width: 70px;">代碼</th>
+                     <th style="width: 70px;">每口股數</th>
+                     <th style="width: 60px;">口數</th>
+                     <th style="width: 80px;">股價</th>
+                     <th style="width: 100px;">總市值</th>
+                     <th style="min-width: 120px;">結算保證金</th>
+                     <th style="min-width: 120px;">維持保證金</th>
+                     <th style="min-width: 120px;">原始保證金</th>
+                     <th style="width: 50px;">操作</th>
+                   </tr>
+                 </thead>
                 <tbody>
                   <!-- 動態生成 -->
                 </tbody>
@@ -149,8 +150,11 @@
 
         <!-- Risk Management Panel -->
         <div class="card" style="margin-top: 20px;">
-          <div class="card-header">
-            ⚡ 風險管理
+          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>⚡ 風險管理</span>
+            <button id="update-risk-btn" class="btn-update" title="根據當前試算更新風險指標" onclick="window.updateRiskMetricsManually()" style="font-size: 0.85rem; padding: 6px 12px;">
+              🔄 更新
+            </button>
           </div>
           <div class="card-body">
             <div class="risk-panel">
@@ -170,6 +174,10 @@
               </div>
 
               <div id="risk-metrics" class="risk-metrics" style="display: none;">
+                <div class="risk-metric-item">
+                  <div class="risk-metric-label">原始保證金總計</div>
+                  <div id="risk-initial-margin" class="risk-metric-value">$0</div>
+                </div>
                 <div class="risk-metric-item">
                   <div class="risk-metric-label">風險指標</div>
                   <div id="risk-ratio" class="risk-metric-value risk-safe">0.00%</div>

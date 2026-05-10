@@ -13,9 +13,9 @@ describe('calculateMargin', () => {
       stockCode: '2330',
       type: 'stock',
       lotSize: 2000,
-      clearingRate: 0.135,
-      maintenanceRate: 0.135,
-      initialRate: 0.1575,
+      clearingRate: 13.5,
+      maintenanceRate: 13.5,
+      initialRate: 15.75,
     };
     
     const result = calculateMargin(item, 600, 1);
@@ -34,9 +34,9 @@ describe('calculateMargin', () => {
       stockCode: '2330',
       type: 'stock',
       lotSize: 100,
-      clearingRate: 0.135,
-      maintenanceRate: 0.135,
-      initialRate: 0.1575,
+      clearingRate: 13.5,
+      maintenanceRate: 13.5,
+      initialRate: 15.75,
     };
     
     const result = calculateMargin(item, 600, 10);
@@ -72,9 +72,9 @@ describe('calculateMargin', () => {
       stockCode: '0000',
       type: 'stock',
       lotSize: 2000,
-      clearingRate: 0.13333,
-      maintenanceRate: 0.13333,
-      initialRate: 0.15555,
+      clearingRate: 13.333,
+      maintenanceRate: 13.333,
+      initialRate: 15.555,
     };
     
     const result = calculateMargin(item, 100, 1);
