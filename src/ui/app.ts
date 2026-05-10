@@ -429,7 +429,7 @@ function renderCalculationTable() {
     
     // 取得原始項目以獲取保證金比例
     const item = marginData.find(m => m.contractCode === calc.contractCode);
-    const totalMarketValue = calc.lotSize * calc.price;
+    const totalMarketValue = calc.lots * calc.lotSize * calc.price;
     
     // 計算保證金比例顯示
     let clearingLabel = '';
