@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-08-02T02:36:19.846156",
+  "last_updated": "2026-08-03T02:37:58.940753",
   "data_date": "20260803",
   "total_count": 320,
   "futures": [
@@ -1701,22 +1701,6 @@
     },
     {
       "type": "stock",
-      "contract": "VOF",
-      "contractCode": "VOF",
-      "contractName": "小型京元電子期貨",
-      "stockCode": "2449",
-      "stockName": "小型京元電子期貨",
-      "underlying": "京元電子股份有限公司",
-      "groupLevel": "級距3",
-      "clearingRate": 15.0,
-      "maintenanceRate": 15.53,
-      "initialRate": 20.25,
-      "lotSize": 100,
-      "date": "20260803",
-      "_hasMargin": true
-    },
-    {
-      "type": "stock",
       "contract": "GRF",
       "contractCode": "GRF",
       "contractName": "京元電子期貨",
@@ -1728,6 +1712,22 @@
       "maintenanceRate": 15.53,
       "initialRate": 20.25,
       "lotSize": 2000,
+      "date": "20260803",
+      "_hasMargin": true
+    },
+    {
+      "type": "stock",
+      "contract": "VOF",
+      "contractCode": "VOF",
+      "contractName": "小型京元電子期貨",
+      "stockCode": "2449",
+      "stockName": "小型京元電子期貨",
+      "underlying": "京元電子股份有限公司",
+      "groupLevel": "級距3",
+      "clearingRate": 15.0,
+      "maintenanceRate": 15.53,
+      "initialRate": 20.25,
+      "lotSize": 100,
       "date": "20260803",
       "_hasMargin": true
     },
@@ -3285,22 +3285,6 @@
     },
     {
       "type": "stock",
-      "contract": "VPF",
-      "contractCode": "VPF",
-      "contractName": "小型日月光投控期貨",
-      "stockCode": "3711",
-      "stockName": "小型日月光投控期貨",
-      "underlying": "日月光投資控股股份有限公司",
-      "groupLevel": "級距2",
-      "clearingRate": 12.0,
-      "maintenanceRate": 12.42,
-      "initialRate": 16.2,
-      "lotSize": 100,
-      "date": "20260803",
-      "_hasMargin": true
-    },
-    {
-      "type": "stock",
       "contract": "OZF",
       "contractCode": "OZF",
       "contractName": "日月光投控期貨",
@@ -3312,6 +3296,22 @@
       "maintenanceRate": 12.42,
       "initialRate": 16.2,
       "lotSize": 2000,
+      "date": "20260803",
+      "_hasMargin": true
+    },
+    {
+      "type": "stock",
+      "contract": "VPF",
+      "contractCode": "VPF",
+      "contractName": "小型日月光投控期貨",
+      "stockCode": "3711",
+      "stockName": "小型日月光投控期貨",
+      "underlying": "日月光投資控股股份有限公司",
+      "groupLevel": "級距2",
+      "clearingRate": 12.0,
+      "maintenanceRate": 12.42,
+      "initialRate": 16.2,
+      "lotSize": 100,
       "date": "20260803",
       "_hasMargin": true
     },
