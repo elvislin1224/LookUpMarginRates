@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-08-03T02:37:58.940753",
+  "last_updated": "2026-08-04T02:22:38.696666",
   "data_date": "20260803",
   "total_count": 320,
   "futures": [
@@ -1899,10 +1899,10 @@
       "stockCode": "2492",
       "stockName": "華新科期貨",
       "underlying": "華新科技股份有限公司",
-      "groupLevel": "",
-      "clearingRate": 30.0,
-      "maintenanceRate": 31.05,
-      "initialRate": 40.5,
+      "groupLevel": "級距3",
+      "clearingRate": 15.0,
+      "maintenanceRate": 15.53,
+      "initialRate": 20.25,
       "lotSize": 2000,
       "date": "20260803",
       "_hasMargin": true
@@ -3036,9 +3036,9 @@
       "stockName": "台勝科期貨",
       "underlying": "台塑勝高科技股份有限公司",
       "groupLevel": "",
-      "clearingRate": 16.0,
-      "maintenanceRate": 16.56,
-      "initialRate": 21.6,
+      "clearingRate": 32.0,
+      "maintenanceRate": 33.12,
+      "initialRate": 43.2,
       "lotSize": 2000,
       "date": "20260803",
       "_hasMargin": true
