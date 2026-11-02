@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-11-01T04:27:57.214970",
+  "last_updated": "2026-11-02T04:29:28.410662",
   "data_date": "20261102",
   "total_count": 326,
   "futures": [
@@ -3477,22 +3477,6 @@
     },
     {
       "type": "stock",
-      "contract": "VVF",
-      "contractCode": "VVF",
-      "contractName": "小型臻鼎-KY期貨",
-      "stockCode": "4958",
-      "stockName": "小型臻鼎-KY期貨",
-      "underlying": "臻鼎科技控股股份有限公司",
-      "groupLevel": "級距3",
-      "clearingRate": 15.0,
-      "maintenanceRate": 15.53,
-      "initialRate": 20.25,
-      "lotSize": 100,
-      "date": "20261102",
-      "_hasMargin": true
-    },
-    {
-      "type": "stock",
       "contract": "LUF",
       "contractCode": "LUF",
       "contractName": "臻鼎-KY期貨",
@@ -3504,6 +3488,22 @@
       "maintenanceRate": 15.53,
       "initialRate": 20.25,
       "lotSize": 2000,
+      "date": "20261102",
+      "_hasMargin": true
+    },
+    {
+      "type": "stock",
+      "contract": "VVF",
+      "contractCode": "VVF",
+      "contractName": "小型臻鼎-KY期貨",
+      "stockCode": "4958",
+      "stockName": "小型臻鼎-KY期貨",
+      "underlying": "臻鼎科技控股股份有限公司",
+      "groupLevel": "級距3",
+      "clearingRate": 15.0,
+      "maintenanceRate": 15.53,
+      "initialRate": 20.25,
+      "lotSize": 100,
       "date": "20261102",
       "_hasMargin": true
     },
