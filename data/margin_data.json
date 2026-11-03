@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-11-02T04:29:28.410662",
+  "last_updated": "2026-11-03T05:24:11.565490",
   "data_date": "20261102",
   "total_count": 326,
   "futures": [
@@ -4668,9 +4668,9 @@
       "stockName": "金居期貨",
       "underlying": "金居開發股份有限公司",
       "groupLevel": "",
-      "clearingRate": 36.0,
-      "maintenanceRate": 37.26,
-      "initialRate": 48.6,
+      "clearingRate": 18.0,
+      "maintenanceRate": 18.63,
+      "initialRate": 24.3,
       "lotSize": 2000,
       "date": "20261102",
       "_hasMargin": true
